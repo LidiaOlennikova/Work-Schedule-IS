@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}График - WorkSchedule IS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-top">
+        <h2>График</h2>
+        <button class="request-btn" onclick="openRequestModal()">
+            <i class="fas fa-hand-paper"></i> Запрос на изменение графика
+        </button>
+    </div>
+    
+    {% if available_pvz.count > 1 %}
+    <div class="pvz-selector">
+        <label for="pvzSelect">Выберите пункт:</label>
+        <select id="pvzSelect" onchange="changePvz(this.value)">
+            {% for pvz in available_pvz %}
+            <option value="{{ pvz.id }}" {% if pvz.id == selected_pvz.id %}selected{% endif %}>
+                {{ pvz.pvz_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+</div>
+
+<div class="schedule-container">
+    {% for month_data in months_data %}
+    <div class="month-section">
+        <h3 class="month-title">График на {{ month_data.month_name }} {{ month_data.year }}</h3>
+        
+        <div class="schedule-section">
+            <!-- Первая половина месяца -->
+            <div class="table-container">
+                <table class="schedule-table">
+
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Пункт</th>
+                            <th rowspan="2">Сотрудники</th>
+                            {% for day in month_data.first_half_days %}
+                            <th style="background-color: #00BFFF; color: white;">{{ day.day_number }}</th>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            {% for day in month_data.first_half_days %}
+                            <th style="background-color: #F8D6FC; color: grey;">{{ day.weekday_short }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for employee in month_data.employees %}
+                        <tr class="{% if employee.is_current_user %}current-user{% endif %}">
+                            <td>{{ employee.pvz }}</td>
+                            <td>{{ employee.name }}</td>
+                            {% for shift in employee.schedule_first_half %}
+                            <td>{% if shift %}<span class="work-day">{{ shift }}</span>{% endif %}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Вторая половина месяца -->
+            <div class="table-container">
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Пункт</th>
+                            <th rowspan="2">Сотрудники</th>
+                            {% for day in month_data.second_half_days %}
+                            <th style="background-color: #00BFFF; color: white;">{{ day.day_number }}</th>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            {% for day in month_data.second_half_days %}
+                            <th style="background-color: #F8D6FC; color: grey;">{{ day.weekday_short }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for employee in month_data.employees %}
+                        <tr class="{% if employee.is_current_user %}current-user{% endif %}">
+                            <td>{{ employee.pvz }}</td>
+                            <td>{{ employee.name }}</td>
+                            {% for shift in employee.schedule_second_half %}
+                            <td>{% if shift %}<span class="work-day">{{ shift }}</span>{% endif %}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    
+    <button class="request-btn" onclick="openRequestModal()">
+        <i class="fas fa-hand-paper"></i> Запрос на изменение графика
+    </button>
+</div>
+<!-- Модальное окно для запроса изменения графика -->
+<div id="requestModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Запрос на изменение графика</h3>
+            <button class="close-btn" onclick="closeRequestModal()">×</button>
+        </div>
+        <form id="scheduleRequestForm" method="POST" action="{% url 'schedule_change_request' %}">
+            {% csrf_token %}
+            
+            <!-- Поле для выбора типа запроса -->
+            <div class="form-group">
+                <label for="requestType">Тип запроса:</label>
+                <select id="requestType" name="request_type" class="form-input" onchange="toggleTimeFields()">
+                    <option value="change">Изменение смены</option>
+                    <option value="day_off">Запрос выходного</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="requestDate">Дата:</label>
+                <input type="date" id="requestDate" name="date" required class="form-input">
+            </div>
+            
+            <!-- Поля времени (скрываются при выборе выходного) -->
+            <div id="timeFields">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="startTime">Время начала:</label>
+                        <input type="time" id="startTime" name="start_time" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="endTime">Время окончания:</label>
+                        <input type="time" id="endTime" name="end_time" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="shiftType">Тип смены:</label>
+                    <select id="shiftType" name="shift_type" class="form-input">
+                        <option value="full">Полная смена</option>
+                        <option value="half">Половина смены</option>
+                        <option value="overtime">Переработка</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="reason">Причина:</label>
+                <textarea id="reason" name="reason" rows="4" placeholder="Опишите причину изменения графика..." required class="form-input"></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeRequestModal()">Отмена</button>
+                <button type="submit" class="btn btn-primary">Отправить запрос</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+    }
+    
+    .schedule-container {
+        background-color: #fafafa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-top: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+    }
+    
+    .month-section {
+        width: 100%;
+        margin-bottom: 0;
+    }
+    
+    .month-title {
+        color: #00BFFF;
+        margin-bottom: 20px;
+        font-size: 20px;
+        border-bottom: 2px solid #00BFFF;
+        padding-bottom: 10px;
+        width: 100%;
+    }
+    
+    .schedule-section {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        width: 100%;
+    }
+    
+    .table-container {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+    }
+    
+    .schedule-table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: white;
+        min-width: 1000px;
+    }
+    
+    .schedule-table th {
+        background-color: #00BFFF;
+        color: white;
+        padding: 12px 8px;
+        text-align: center;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        white-space: nowrap;
+    }
+    
+    .schedule-table td {
+        padding: 12px 8px;
+        text-align: center;
+        border: 1px solid #ddd;
+        white-space: nowrap;
+    }
+    
+    .current-user {
+        background-color: #e6f7ff !important;
+    }
+    
+    .schedule-table tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+    
+    .schedule-table tr:hover {
+        background-color: #f0f8ff;
+    }
+    
+    .work-day {
+        background-color: #EE82EE;
+        color: white;
+        border-radius: 3px;
+        padding: 6px 10px;
+        display: inline-block;
+        font-weight: bold;
+        min-width: 30px;
+    }
+    
+    .half-day {
+        background-color: #dda0dd;
+        color: white;
+        border-radius: 3px;
+        padding: 6px 10px;
+        display: inline-block;
+        font-weight: bold;
+        min-width: 30px;
+    }
+    
+    .request-btn {
+        background-color: #EE82EE;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        transition: background-color 0.3s ease;
+        width: auto;
+        align-self: center;
+    }
+    
+    .request-btn:hover {
+        background-color: #d870d8;
+    }
+    
+    .pvz-selector {
+        margin-top: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .pvz-selector label {
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .pvz-selector select {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: white;
+    }
+    
+    /* Стили для модального окна */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 30px;
+        border-radius: 10px;
+        width: 500px;
+        max-width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #A9A9A9;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-row {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .form-row .form-group {
+        flex: 1;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+    
+    textarea.form-input {
+        resize: vertical;
+        min-height: 80px;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 30px;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .btn-primary {
+        background-color: #00BFFF;
+        color: white;
+    }
+    
+    .btn-secondary {
+        background-color: #A9A9A9;
+        color: white;
+    }
+    
+    #timeFields {
+    transition: all 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function changePvz(pvzId) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('pvz', pvzId);
+        window.location.href = url.toString();
+    }
+    
+    function openRequestModal() {
+        document.getElementById('requestModal').style.display = 'block';
+        // Устанавливаем минимальную дату - сегодня
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('requestDate').min = today;
+    }
+    
+    function closeRequestModal() {
+        document.getElementById('requestModal').style.display = 'none';
+        document.getElementById('scheduleRequestForm').reset();
+    }
+    
+    // Закрытие модального окна при клике вне его
+    window.addEventListener('click', function(e) {
+        const modal = document.getElementById('requestModal');
+        if (e.target === modal) {
+            closeRequestModal();
+        }
+    });
+    
+    // Валидация времени
+    document.getElementById('scheduleRequestForm').addEventListener('submit', function(e) {
+        const startTime = document.getElementById('startTime').value;
+        const endTime = document.getElementById('endTime').value;
+        
+        if (startTime >= endTime) {
+            e.preventDefault();
+            alert('Время окончания должно быть позже времени начала!');
+            return false;
+        }
+    });
+
+function toggleTimeFields() {
+    const requestType = document.getElementById('requestType').value;
+    const timeFields = document.getElementById('timeFields');
+    
+    if (requestType === 'day_off') {
+        timeFields.style.display = 'none';
+        // Очищаем поля времени при выходном
+        document.querySelectorAll('#timeFields input, #timeFields select').forEach(field => {
+            field.value = '';
+        });
+    } else {
+        timeFields.style.display = 'block';
+    }
+}
+
+function openRequestModal() {
+    document.getElementById('requestModal').style.display = 'block';
+    // Устанавливаем минимальную дату - сегодня
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('requestDate').min = today;
+    // Инициализируем поля времени
+    toggleTimeFields();
+}
+
+function closeRequestModal() {
+    document.getElementById('requestModal').style.display = 'none';
+    document.getElementById('scheduleRequestForm').reset();
+    // Сбрасываем отображение полей времени
+    toggleTimeFields();
+}
+
+// Закрытие модального окна при клике вне его
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('requestModal');
+    if (e.target === modal) {
+        closeRequestModal();
+    }
+});
+
+// Валидация времени (только для изменения смены)
+document.getElementById('scheduleRequestForm').addEventListener('submit', function(e) {
+    const requestType = document.getElementById('requestType').value;
+    const startTime = document.getElementById('startTime').value;
+    const endTime = document.getElementById('endTime').value;
+    
+    // Проверяем время только для запроса изменения смены
+    if (requestType === 'change' && startTime && endTime && startTime >= endTime) {
+        e.preventDefault();
+        alert('Время окончания должно быть позже времени начала!');
+        return false;
+    }
+});
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    toggleTimeFields();
+});
+</script>
+{% endblock %}

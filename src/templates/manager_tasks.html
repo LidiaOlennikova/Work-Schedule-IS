@@ -1,0 +1,847 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Управление задачами - WorkSchedule IS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-top">
+        <h2><i class="fas fa-tasks"></i> Управление задачами</h2>
+    </div>
+</div>
+
+<div class="tasks-container">
+    <!-- Форма создания задачи -->
+    <div class="tasks-form-card">
+        <h3><i class="fas fa-plus-circle"></i> Новая задача</h3>
+        <form id="taskForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="taskTitle">Название задачи *</label>
+                <input type="text" id="taskTitle" class="form-input" 
+                       placeholder="Введите название задачи" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="taskDesc">Описание</label>
+                <textarea id="taskDesc" class="form-input" rows="3" 
+                          placeholder="Подробное описание задачи (необязательно)"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="taskPVZ">Пункт выдачи (ПВЗ) *</label>
+                <select id="taskPVZ" class="form-input" required>
+                    <option value="">Выберите ПВЗ</option>
+                    {% for pvz in pvz_list %}
+                    <option value="{{ pvz.id }}">{{ pvz.pvz_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="taskAssignee">Назначить сотруднику</label>
+                <select id="taskAssignee" class="form-input">
+                    <option value="">Всем сотрудникам ПВЗ</option>
+                    {% for employee in employees %}
+                    <option value="{{ employee.id }}">{{ employee.get_full_name|default:employee.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="taskPriority">Приоритет</label>
+                    <select id="taskPriority" class="form-input">
+                        <option value="low">Низкий</option>
+                        <option value="medium" selected>Средний</option>
+                        <option value="high">Высокий</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="taskDeadline">Срок выполнения</label>
+                    <input type="date" id="taskDeadline" class="form-input">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="taskIsGlobal" checked>
+                    Общая задача для всего ПВЗ
+                </label>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="submitTaskBtn">
+                    <i class="fas fa-plus-circle"></i> Создать задачу
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Список задач -->
+    <div class="tasks-list-card">
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="all">Все</button>
+            <button class="filter-btn" data-filter="pending">Ожидают</button>
+            <button class="filter-btn" data-filter="in_progress">В работе</button>
+            <button class="filter-btn" data-filter="completed">Выполнены</button>
+        </div>
+        
+        <div class="filter-row">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="filterPVZ">Фильтр по ПВЗ:</label>
+                <select id="filterPVZ" class="form-input" onchange="applyFilters()">
+                    <option value="">Все ПВЗ</option>
+                    {% for pvz in pvz_list %}
+                    <option value="{{ pvz.id }}">{{ pvz.pvz_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div id="tasksList">
+            <div class="empty-state">
+                <i class="fas fa-spinner fa-spin"></i> Загрузка задач...
+            </div>
+        </div>
+        
+        <div class="tasks-footer" id="tasksFooter" style="display: none;">
+            <span id="tasksCount"></span>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для редактирования задачи -->
+<div id="editTaskModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Редактирование задачи</h3>
+            <button class="close-btn" onclick="closeEditModal()">×</button>
+        </div>
+        <form id="editTaskForm">
+            {% csrf_token %}
+            <input type="hidden" id="editTaskId">
+            
+            <div class="form-group">
+                <label for="editTaskTitle">Название задачи</label>
+                <input type="text" id="editTaskTitle" class="form-input" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editTaskDesc">Описание</label>
+                <textarea id="editTaskDesc" class="form-input" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="editTaskPriority">Приоритет</label>
+                <select id="editTaskPriority" class="form-input">
+                    <option value="low">Низкий</option>
+                    <option value="medium">Средний</option>
+                    <option value="high">Высокий</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="editTaskDeadline">Срок выполнения</label>
+                <input type="date" id="editTaskDeadline" class="form-input">
+            </div>
+            
+            <div class="form-group">
+                <label for="editTaskStatus">Статус</label>
+                <select id="editTaskStatus" class="form-input">
+                    <option value="pending">Ожидает</option>
+                    <option value="in_progress">В работе</option>
+                    <option value="completed">Выполнено</option>
+                    <option value="cancelled">Отменено</option>
+                </select>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Отмена</button>
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tasks-container {
+        display: flex;
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .tasks-form-card {
+        flex: 1;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        padding: 20px;
+        height: fit-content;
+    }
+    
+    .tasks-list-card {
+        flex: 2;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        padding: 20px;
+    }
+    
+    .tasks-form-card h3 {
+        color: #00BFFF;
+        margin-top: 0;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #555;
+        font-size: 14px;
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-sizing: border-box;
+        font-size: 14px;
+    }
+    
+    textarea.form-input {
+        resize: vertical;
+        min-height: 60px;
+    }
+    
+    .form-row {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .form-row .form-group {
+        flex: 1;
+    }
+    
+    .checkbox-label {
+        display: flex !important;
+        align-items: center;
+        gap: 10px;
+        font-weight: normal !important;
+        cursor: pointer;
+    }
+    
+    .checkbox-label input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: #00BFFF;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+        background-color: #00BFFF;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: #0099CC;
+    }
+    
+    .btn-secondary {
+        background-color: #A9A9A9;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background-color: #999;
+    }
+    
+    .btn-danger {
+        background-color: #ff4444;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background-color: #cc0000;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    /* Фильтры */
+    .filter-bar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .filter-btn {
+        background: white;
+        border: 1px solid #ddd;
+        padding: 8px 15px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.3s ease;
+    }
+    
+    .filter-btn.active {
+        background: #00BFFF;
+        color: white;
+        border-color: #00BFFF;
+    }
+    
+    .filter-btn:hover {
+        border-color: #00BFFF;
+    }
+    
+    .filter-row {
+        margin-bottom: 15px;
+    }
+    
+    /* Список задач */
+    .task-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 15px;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+    }
+    
+    .task-item:last-child {
+        border-bottom: none;
+    }
+    
+    .task-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .task-content {
+        flex: 1;
+    }
+    
+    .task-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .task-desc {
+        color: #666;
+        font-size: 14px;
+        margin: 5px 0;
+        line-height: 1.4;
+    }
+    
+    .task-meta {
+        display: flex;
+        gap: 15px;
+        font-size: 12px;
+        color: #888;
+        margin-top: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .task-actions {
+        display: flex;
+        gap: 8px;
+        margin-left: 15px;
+        align-items: center;
+    }
+    
+    .task-action-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 5px;
+        border-radius: 3px;
+        transition: all 0.2s;
+    }
+    
+    .task-action-btn.edit-btn {
+        color: #00BFFF;
+    }
+    
+    .task-action-btn.edit-btn:hover {
+        background-color: rgba(0, 191, 255, 0.1);
+    }
+    
+    .task-action-btn.delete-btn {
+        color: #ff4444;
+    }
+    
+    .task-action-btn.delete-btn:hover {
+        background-color: rgba(255, 68, 68, 0.1);
+    }
+    
+    .task-badge {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: bold;
+        color: white;
+    }
+    
+    .badge-pending { background-color: #FFA500; }
+    .badge-in_progress { background-color: #00BFFF; }
+    .badge-completed { background-color: #28a745; }
+    .badge-cancelled { background-color: #A9A9A9; }
+    .badge-priority-high { background-color: #ff4444; }
+    .badge-priority-medium { background-color: #FFA500; }
+    .badge-priority-low { background-color: #28a745; }
+    
+    .completed-task {
+        opacity: 0.7;
+    }
+    
+    .completed-task .task-title-text {
+        text-decoration: line-through;
+    }
+    
+    .overdue-badge {
+        color: #ff4444;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #aaa;
+    }
+    
+    .empty-state i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        display: block;
+    }
+    
+    .tasks-footer {
+        padding: 15px 0 0;
+        border-top: 1px solid #eee;
+        margin-top: 15px;
+        color: #888;
+        font-size: 13px;
+    }
+    
+    /* Модальное окно */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 25px;
+        border-radius: 10px;
+        width: 500px;
+        max-width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .modal-header h3 {
+        margin: 0;
+        color: #00BFFF;
+    }
+    
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #A9A9A9;
+    }
+    
+    .close-btn:hover {
+        color: #333;
+    }
+    
+    @media (max-width: 768px) {
+        .tasks-container {
+            flex-direction: column;
+        }
+        
+        .form-row {
+            flex-direction: column;
+            gap: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Получение CSRF токена
+function getCsrfToken() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    return csrfToken ? csrfToken.value : '';
+}
+
+let currentFilter = 'all';
+let currentPvzFilter = '';
+
+// API функции
+async function apiGetTasks() {
+    try {
+        let url = '/api/tasks/';
+        const params = new URLSearchParams();
+        if (currentFilter !== 'all') params.append('status', currentFilter);
+        if (currentPvzFilter) params.append('pvz_id', currentPvzFilter);
+        if (params.toString()) url += '?' + params.toString();
+        
+        const response = await fetch(url, {
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await response.json();
+        return data.success ? data.tasks : [];
+    } catch (error) {
+        console.error('Ошибка загрузки задач:', error);
+        return [];
+    }
+}
+
+async function apiCreateTask(taskData) {
+    try {
+        const response = await fetch('/api/tasks/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(taskData)
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Ошибка создания задачи:', error);
+        return { success: false, error: 'Ошибка сети' };
+    }
+}
+
+async function apiDeleteTask(taskId) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/delete/`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Ошибка удаления задачи:', error);
+        return { success: false, error: 'Ошибка сети' };
+    }
+}
+
+async function apiUpdateTask(taskId, taskData) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/update/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(taskData)
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Ошибка обновления задачи:', error);
+        return { success: false, error: 'Ошибка сети' };
+    }
+}
+
+async function apiChangeTaskStatus(taskId, status) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ status: status })
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Ошибка изменения статуса:', error);
+        return { success: false, error: 'Ошибка сети' };
+    }
+}
+
+// Форматирование
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+// Рендеринг списка задач
+function renderTasksList(tasks) {
+    const container = document.getElementById('tasksList');
+    const footer = document.getElementById('tasksFooter');
+    const countSpan = document.getElementById('tasksCount');
+    
+    if (!tasks || tasks.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-clipboard-list"></i>
+                Задач не найдено. Создайте первую задачу.
+            </div>
+        `;
+        footer.style.display = 'none';
+        return;
+    }
+    
+    let html = '';
+    
+    tasks.forEach(task => {
+        const isOverdue = task.is_overdue;
+        const isCompleted = task.status === 'completed';
+        
+        html += `
+            <div class="task-item ${isCompleted ? 'completed-task' : ''}">
+                <div class="task-content">
+                    <div class="task-title">
+                        <span class="task-title-text">${escapeHtml(task.title)}</span>
+                        ${isOverdue ? '<span class="overdue-badge"><i class="fas fa-exclamation-circle"></i> Просрочено</span>' : ''}
+                        <span class="task-badge badge-${task.status}">${task.status_display}</span>
+                        <span class="task-badge badge-priority-${task.priority}">${task.priority_display}</span>
+                    </div>
+                    ${task.description ? `<div class="task-desc">${escapeHtml(task.description)}</div>` : ''}
+                    <div class="task-meta">
+                        <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(task.pvz_name)}</span>
+                        <span><i class="fas fa-user"></i> ${escapeHtml(task.assigned_to_name || 'Все сотрудники')}</span>
+                        ${task.deadline ? `<span><i class="far fa-calendar-alt"></i> ${formatDate(task.deadline)}</span>` : ''}
+                        <span><i class="fas fa-user-edit"></i> Создал: ${escapeHtml(task.created_by_name || '—')}</span>
+                        <span><i class="far fa-clock"></i> ${formatDate(task.created_at)}</span>
+                        ${task.completed_at ? `<span style="color: #28a745;"><i class="fas fa-check"></i> Выполнено: ${formatDate(task.completed_at)}</span>` : ''}
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button class="task-action-btn edit-btn" onclick="editTask(${task.id})" title="Редактировать">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="task-action-btn delete-btn" onclick="deleteTask(${task.id})" title="Удалить">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    footer.style.display = 'block';
+    countSpan.textContent = `Всего задач: ${tasks.length}`;
+}
+
+// Загрузка задач
+async function loadAllTasks() {
+    const tasks = await apiGetTasks();
+    renderTasksList(tasks);
+}
+
+// Применение фильтров
+function applyFilters() {
+    currentPvzFilter = document.getElementById('filterPVZ').value;
+    loadAllTasks();
+}
+
+// Создание задачи
+document.getElementById('taskForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const title = document.getElementById('taskTitle').value.trim();
+    const description = document.getElementById('taskDesc').value.trim();
+    const pvzId = document.getElementById('taskPVZ').value;
+    const assigneeId = document.getElementById('taskAssignee').value;
+    const priority = document.getElementById('taskPriority').value;
+    const deadline = document.getElementById('taskDeadline').value;
+    const isGlobal = document.getElementById('taskIsGlobal').checked;
+    
+    if (!title) {
+        alert('Введите название задачи');
+        return;
+    }
+    
+    if (!pvzId) {
+        alert('Выберите ПВЗ');
+        return;
+    }
+    
+    const taskData = {
+        title: title,
+        description: description,
+        pvz_id: parseInt(pvzId),
+        assigned_to_id: assigneeId ? parseInt(assigneeId) : null,
+        priority: priority,
+        deadline: deadline || null,
+        is_global: isGlobal
+    };
+    
+    const btn = document.getElementById('submitTaskBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Создание...';
+    
+    const result = await apiCreateTask(taskData);
+    
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-plus-circle"></i> Создать задачу';
+    
+    if (result.success) {
+        document.getElementById('taskForm').reset();
+        document.getElementById('taskIsGlobal').checked = true;
+        loadAllTasks();
+        alert('Задача успешно создана!');
+    } else {
+        alert('Ошибка: ' + (result.error || 'Не удалось создать задачу'));
+    }
+});
+
+// Удаление задачи
+async function deleteTask(taskId) {
+    if (!confirm('Вы уверены, что хотите удалить эту задачу?')) return;
+    
+    const result = await apiDeleteTask(taskId);
+    
+    if (result.success) {
+        loadAllTasks();
+    } else {
+        alert('Ошибка: ' + (result.error || 'Не удалось удалить задачу'));
+    }
+}
+
+// Редактирование задачи
+async function editTask(taskId) {
+    const tasks = await apiGetTasks();
+    const task = tasks.find(t => t.id === taskId);
+    
+    if (!task) return;
+    
+    document.getElementById('editTaskId').value = task.id;
+    document.getElementById('editTaskTitle').value = task.title;
+    document.getElementById('editTaskDesc').value = task.description || '';
+    document.getElementById('editTaskPriority').value = task.priority;
+    document.getElementById('editTaskDeadline').value = task.deadline || '';
+    document.getElementById('editTaskStatus').value = task.status;
+    
+    document.getElementById('editTaskModal').style.display = 'block';
+}
+
+function closeEditModal() {
+    document.getElementById('editTaskModal').style.display = 'none';
+}
+
+document.getElementById('editTaskForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const taskId = document.getElementById('editTaskId').value;
+    const taskData = {
+        title: document.getElementById('editTaskTitle').value.trim(),
+        description: document.getElementById('editTaskDesc').value.trim(),
+        priority: document.getElementById('editTaskPriority').value,
+        deadline: document.getElementById('editTaskDeadline').value || null
+    };
+    
+    const result = await apiUpdateTask(taskId, taskData);
+    
+    if (result.success) {
+        // Также обновляем статус если изменился
+        const newStatus = document.getElementById('editTaskStatus').value;
+        const tasks = await apiGetTasks();
+        const task = tasks.find(t => t.id === parseInt(taskId));
+        
+        if (task && task.status !== newStatus) {
+            await apiChangeTaskStatus(taskId, newStatus);
+        }
+        
+        closeEditModal();
+        loadAllTasks();
+    } else {
+        alert('Ошибка: ' + (result.error || 'Не удалось обновить задачу'));
+    }
+});
+
+// Закрытие модального окна при клике вне его
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('editTaskModal');
+    if (e.target === modal) {
+        closeEditModal();
+    }
+});
+
+// Инициализация фильтров
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentFilter = this.dataset.filter;
+        loadAllTasks();
+    });
+});
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    loadAllTasks();
+    
+    // Автообновление каждые 30 секунд
+    setInterval(loadAllTasks, 30000);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Архив графиков - WorkSchedule IS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Архив графиков</h2>
+</div>
+
+<div class="archive-container">
+    {% for month_data in archive_data %}
+    <div class="archive-card" data-month="{{ month_data.month_num }}" data-year="{{ month_data.year }}" onclick="openMonthDetails({{ month_data.month_num }}, {{ month_data.year }})">
+        <h3>{{ month_data.month_name }} {{ month_data.year }}</h3>
+        <p>Отработано смен: {{ month_data.total_shifts }}</p>
+        <p>Общее время: {{ month_data.total_hours }} часов</p>
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value">{{ month_data.late_count }}</div>
+                <div class="stat-label">Опоздания</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ month_data.overtime_count }}</div>
+                <div class="stat-label">Переработки</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ month_data.workload_percentage }}%</div>
+                <div class="stat-label">Загруженность</div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="no-data">
+        <p>Нет архивных данных</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Модальное окно для детального просмотра месяца -->
+<div id="monthDetailsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalMonthTitle">Детали графика</h3>
+            <button class="close-btn" onclick="closeMonthDetails()">×</button>
+        </div>
+        <div class="modal-body">
+            <div id="monthDetailsContent">
+                <!-- Сюда будет загружаться детальная информация -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+    }
+    
+    .archive-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        background-color: #fafafa;
+        padding: 20px;
+        border-radius: 10px;
+    }
+    
+    .archive-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        padding: 20px;
+        cursor: pointer;
+        transition: transform 0.3s;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .archive-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .archive-card h3 {
+        margin-top: 0;
+        color: #00BFFF;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+        font-size: 18px;
+    }
+    
+    .archive-card p {
+        color: #666;
+        margin: 8px 0;
+        font-size: 14px;
+    }
+    
+    .archive-card .stats {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #f0f0f0;
+    }
+    
+    .stat-item {
+        text-align: center;
+        flex: 1;
+    }
+    
+    .stat-value {
+        font-weight: bold;
+        color: #EE82EE;
+        font-size: 16px;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+        color: #A9A9A9;
+        margin-top: 5px;
+    }
+    
+    .no-data {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Функция открытия детального просмотра месяца
+function openMonthDetails(month, year) {
+    // Показываем модальное окно
+    document.getElementById('monthDetailsModal').style.display = 'block';
+    
+    // Устанавливаем заголовок
+    document.getElementById('modalMonthTitle').textContent = `Детали графика - ${getMonthName(month)} ${year}`;
+    
+    // Получаем данные из архива
+    const archiveData = {{ archive_data|safe }};
+    const monthData = archiveData.find(m => m.month_num === month && m.year === year);
+    
+    if (monthData) {
+        const content = `
+            <div class="month-details">
+                <h4>Статистика за ${getMonthName(month)} ${year}</h4>
+                <div class="detail-stats">
+                    <p><strong>Всего смен:</strong> ${monthData.total_shifts}</p>
+                    <p><strong>Отработано часов:</strong> ${monthData.total_hours}</p>
+                    <p><strong>Средняя продолжительность смены:</strong> 12 часов</p>
+                    <p><strong>Загруженность:</strong> ${monthData.workload_percentage}%</p>
+                    <p><strong>Опоздания:</strong> ${monthData.late_count}</p>
+                    <p><strong>Переработки:</strong> ${monthData.overtime_count}</p>
+                </div>
+                <div class="employee-list">
+                    <h5>Сотрудники:</h5>
+                    <ul>
+                        <li>Валерия Болгар - ${Math.floor(monthData.total_shifts * 0.6)} смен</li>
+                        <li>Иван Иванов - ${Math.floor(monthData.total_shifts * 0.4)} смен</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('monthDetailsContent').innerHTML = content;
+    } else {
+        document.getElementById('monthDetailsContent').innerHTML = '<div class="no-data">Нет данных за этот месяц</div>';
+    }
+}
+
+// Функция закрытия модального окна
+function closeMonthDetails() {
+    document.getElementById('monthDetailsModal').style.display = 'none';
+}
+
+// Вспомогательные функции
+function getMonthName(month) {
+    const months = ['', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    return months[month];
+}
+
+function getRandomNumber(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// Закрытие модального окна при клике вне его
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('monthDetailsModal');
+    if (e.target === modal) {
+        closeMonthDetails();
+    }
+});
+</script>
+{% endblock %}

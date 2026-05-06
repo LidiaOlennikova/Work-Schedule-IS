@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Предпросмотр заказов - WorkSchedule IS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Предпросмотр сгенерированных данных</h2>
+    <p>Проверьте данные перед импортом в базу</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">{{ temp_data.pvz.pvz_name }} - {{ date_range }}</h4>
+            <span class="badge bg-{% if temp_data.status == 'generated' %}info{% elif temp_data.status == 'imported' %}success{% else %}warning{% endif %}">
+                {{ temp_data.get_status_display }}
+            </span>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <div class="summary-info mb-4">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="info-box">
+                        <div class="info-box-icon bg-info">
+                            <i class="fas fa-calendar"></i>
+                        </div>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Дней</span>
+                            <span class="info-box-number">{{ days_count }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box">
+                        <div class="info-box-icon bg-success">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Всего заказов</span>
+                            <span class="info-box-number">{{ total_orders }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box">
+                        <div class="info-box-icon bg-warning">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Среднее в день</span>
+                            <span class="info-box-number">
+    {% if days_count > 0 %}
+        {{ total_orders|floatformat:0|add:"0"|floatformat:0|divisibleby:1|default:0 }}
+    {% else %}
+        0
+    {% endif %}
+</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box">
+                        <div class="info-box-icon bg-primary">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Создано</span>
+                            <span class="info-box-number">{{ temp_data.created_at|date:"d.m.Y H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview-data mb-4">
+            <h5>Предпросмотр данных</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Время</th>
+                            <th>Номер заказа</th>
+                            <th>ID клиента</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders_data %}
+                        <tr>
+                            <td>{{ order.date }}</td>
+                            <td>{{ order.time }}</td>
+                            <td>{{ order.order_number }}</td>
+                            <td>{{ order.client_id }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if total_orders > 100 %}
+                <p class="text-muted">Показаны первые 100 записей из {{ total_orders }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Статистика по дням</h5>
+            </div>
+            <div class="card-body">
+                <pre class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+{{ temp_data.preview_data }}
+                </pre>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <form method="post" class="d-inline">
+                {% csrf_token %}
+                {% if temp_data.status == 'generated' %}
+                    <button type="submit" name="action" value="import" class="btn btn-success btn-lg">
+                        <i class="fas fa-database"></i> Импортировать в базу данных
+                    </button>
+                    
+                    <button type="submit" name="action" value="regenerate" class="btn btn-warning btn-lg">
+                        <i class="fas fa-redo"></i> Перегенерировать
+                    </button>
+                    
+                    <button type="submit" name="action" value="reject" class="btn btn-danger btn-lg" 
+                            onclick="return confirm('Вы уверены, что хотите отклонить эти данные?')">
+                        <i class="fas fa-times"></i> Отклонить
+                    </button>
+                {% elif temp_data.status == 'imported' %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        Данные были импортированы {{ temp_data.imported_at|date:"d.m.Y H:i" }}
+                    </div>
+                {% endif %}
+            </form>
+            
+            {% if file_exists %}
+                <a href="{% url 'download_temp_file' temp_data.id %}" class="btn btn-info btn-lg">
+                    <i class="fas fa-download"></i> Скачать Excel файл
+                </a>
+            {% endif %}
+            
+            <a href="{% url 'generate_orders' %}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-arrow-left"></i> Вернуться к генерации
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.info-box {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: 5px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+}
+
+.info-box-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 5px;
+    color: white;
+    font-size: 24px;
+    margin-right: 15px;
+}
+
+.info-box-content {
+    flex: 1;
+}
+
+.info-box-text {
+    display: block;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.info-box-number {
+    display: block;
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 30px;
+    justify-content: center;
+}
+
+.btn-lg {
+    padding: 15px 25px;
+    font-size: 18px;
+}
+</style>
+{% endblock %}

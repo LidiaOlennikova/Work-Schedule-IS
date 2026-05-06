@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Генерация заказов - WorkSchedule IS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Генерация заказов за период</h2>
+    <p>Выберите ПВЗ и период для генерации тестовых данных</p>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" class="order-form">
+                    {% csrf_token %}
+                    
+                    <div class="form-section">
+                        <h3>Параметры генерации</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="id_pvz">{{ form.pvz.label }}</label>
+                                {{ form.pvz }}
+                                {% if form.pvz.errors %}
+                                    <div class="error">{{ form.pvz.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="id_date_range_start">{{ form.date_range_start.label }}</label>
+                                {{ form.date_range_start }}
+                                {% if form.date_range_start.errors %}
+                                    <div class="error">{{ form.date_range_start.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="id_date_range_end">{{ form.date_range_end.label }}</label>
+                                {{ form.date_range_end }}
+                                {% if form.date_range_end.errors %}
+                                    <div class="error">{{ form.date_range_end.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-cogs"></i> Сгенерировать данные
+                        </button>
+                        <a href="{% url 'statistics' %}" class="btn btn-secondary">
+                            <i class="fas fa-chart-bar"></i> К статистике
+                        </a>
+                    </div>
+                </form>
+                
+                <div class="form-info mt-4">
+                    <h4><i class="fas fa-info-circle"></i> Как это работает:</h4>
+                    <ol>
+                        <li>Система сгенерирует случайные данные заказа для каждого дня в указанном периоде</li>
+                        <li>Вы сможете просмотреть сгенерированные данные и скачать их в Excel</li>
+                        <li>После проверки можно импортировать данные в базу или отклонить</li>
+                        <li>Импортированные данные можно будет редактировать в админке</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Последние генерации</h5>
+            </div>
+            <div class="card-body">
+                {% if existing_temps %}
+                    <div class="list-group">
+                        {% for temp in existing_temps %}
+                            <a href="{% url 'preview_orders' temp.id %}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ temp.pvz.pvz_name }}</h6>
+                                    <small class="text-muted">{{ temp.created_at|date:"d.m.Y H:i" }}</small>
+                                </div>
+                                <p class="mb-1">Период: {{ temp.date_range_start|date:"d.m.Y" }} - {{ temp.date_range_end|date:"d.m.Y" }}</p>
+                                <small class="text-muted">
+                                    <span class="badge bg-{% if temp.status == 'generated' %}info{% elif temp.status == 'imported' %}success{% else %}secondary{% endif %}">
+                                        {{ temp.get_status_display }}
+                                    </span>
+                                </small>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">Нет недавних генераций</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.order-form {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.form-section h3 {
+    color: #00BFFF;
+    margin-bottom: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: #00BFFF;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0099CC;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+.form-info {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f0f8ff;
+    border-radius: 8px;
+    border-left: 4px solid #00BFFF;
+}
+
+.form-info h4 {
+    color: #00BFFF;
+    margin-bottom: 10px;
+}
+
+.form-info ol {
+    margin-left: 20px;
+}
+
+.form-info li {
+    margin-bottom: 8px;
+    color: #666;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Устанавливаем даты по умолчанию
+    const today = new Date();
+    const startDateInput = document.querySelector('input[name="date_range_start"]');
+    const endDateInput = document.querySelector('input[name="date_range_end"]');
+    
+    if (startDateInput && !startDateInput.value) {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        startDateInput.value = weekAgo.toISOString().split('T')[0];
+    }
+    
+    if (endDateInput && !endDateInput.value) {
+        endDateInput.value = today.toISOString().split('T')[0];
+    }
+});
+</script>
+{% endblock %}

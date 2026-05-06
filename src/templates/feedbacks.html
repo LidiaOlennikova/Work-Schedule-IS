@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Отзывы и рейтинги - WorkSchedule IS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Отзывы клиентов и рейтинги</h2>
+</div>
+
+<div class="filter-controls">
+    <select class="filter-select" id="pvzFilter">
+        <option value="">Все ПВЗ</option>
+        {% for pvz in pvz_list %}
+        <option value="{{ pvz.id }}">{{ pvz.pvz_name }}</option>
+        {% endfor %}
+    </select>
+    <select class="filter-select" id="ratingFilter">
+        <option value="">Все оценки</option>
+        <option value="5">5 звезд</option>
+        <option value="4">4 звезды</option>
+        <option value="3">3 звезды</option>
+        <option value="2">2 звезды</option>
+        <option value="1">1 звезда</option>
+    </select>
+    <button class="filter-btn" onclick="applyFilters()">
+        <i class="fas fa-filter"></i> Применить
+    </button>
+</div>
+
+<!-- Карточки сотрудников -->
+<div class="rating-section">
+    <h3>Рейтинги сотрудников <span id="employeeCount" class="count-badge">{{ employees|length }}</span></h3>
+    <div class="cards-container employee-cards" id="employeeCards">
+        {% for employee in employees %}
+        <div class="rating-card employee-card" 
+             data-employee-id="{{ employee.id }}" 
+             data-pvz-ids="{{ employee.pvz_ids|join:',' }},">
+            <div class="card-header">
+                <div class="employee-name">{{ employee.first_name }} {{ employee.last_name }}</div>
+                <div class="overall-rating">
+                    <span class="rating-number">{{ employee.average_rating|floatformat:2 }}</span>
+                    <div class="mini-stars">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= employee.average_rating %}
+                                <i class="fas fa-star"></i>
+                            {% else %}
+                                <i class="far fa-star"></i>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="criteria-list">
+                {% for criteria in employee.rating_details %}
+                <div class="criteria-item">
+                    <div class="criteria-row">
+                        <span class="criteria-name">{{ criteria.name }}</span>
+                        <span class="criteria-value">{{ criteria.value|floatformat:2 }}</span>
+                    </div>
+                    <div class="diagram-container">
+                        <!-- Градиентная полоса вместо сегментов -->
+                        <div class="gradient-rating-bar">
+                            <div class="gradient-fill" style="width: {{ criteria.percentage }}%; background: {{ criteria.gradient_color }};"></div>
+                        </div>
+                        <div class="diagram-scale">
+                            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                        </div>
+                    </div>
+                    <div class="criteria-count">{{ criteria.count }} оцен.</div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="employee-pvz-info" style="display: none; font-size: 10px; color: #999; margin-top: 5px;">
+                ПВЗ: {% for pvz in employee.pvz %}{{ pvz.pvz_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Карточки ПВЗ -->
+<div class="rating-section">
+    <h3>Рейтинги ПВЗ <span id="pvzCount" class="count-badge">{{ pvz_list|length }}</span></h3>
+    <div class="cards-container pvz-cards" id="pvzCards">
+        {% for pvz in pvz_list %}
+        <div class="rating-card pvz-card" data-pvz-id="{{ pvz.id }}">
+            <div class="card-header">
+                <div class="pvz-name">{{ pvz.pvz_name }}</div>
+                <div class="overall-rating">
+                    <span class="rating-number">{{ pvz.overall_rating|floatformat:2 }}</span>
+                    <div class="mini-stars">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= pvz.overall_rating %}
+                                <i class="fas fa-star"></i>
+                            {% else %}
+                                <i class="far fa-star"></i>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="criteria-list">
+                {% for criteria in pvz.rating_details %}
+                <div class="criteria-item">
+                    <div class="criteria-row">
+                        <span class="criteria-name">{{ criteria.name }}</span>
+                        <span class="criteria-value">{{ criteria.value|floatformat:2 }}</span>
+                    </div>
+                    <div class="diagram-container">
+                        <!-- Градиентная полоса вместо сегментов -->
+                        <div class="gradient-rating-bar">
+                            <div class="gradient-fill" style="width: {{ criteria.percentage }}%; background: {{ criteria.gradient_color }};"></div>
+                        </div>
+                        <div class="diagram-scale">
+                            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                        </div>
+                    </div>
+                    <div class="criteria-count">{{ criteria.count }} оцен.</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Отзывы -->
+<div class="feedback-container">
+    <h3>Последние отзывы</h3>
+    
+    {% for feedback in feedbacks %}
+    <div class="feedback-item" data-pvz="{{ feedback.pvz.id }}" data-rating="{{ feedback.overall_rating_pvz }}">
+        <div class="feedback-header">
+            <span class="client-id">ID клиента: {{ feedback.client_id }}</span>
+            <span class="feedback-date">{{ feedback.created_at|date:"d.m.Y, H:i" }}</span>
+            <span class="feedback-pvz">{{ feedback.pvz.pvz_name }}</span>
+        </div>
+        <div class="stars">
+            {% with rating=feedback.overall_rating_pvz %}
+                {% for i in "12345" %}
+                    {% if forloop.counter <= rating %}
+                        <i class="fas fa-star"></i>
+                    {% else %}
+                        <i class="far fa-star"></i>
+                    {% endif %}
+                {% endfor %}
+            {% endwith %}
+            <span class="rating-number">{{ feedback.overall_rating_pvz|floatformat:2 }}</span>
+        </div>
+        <div class="feedback-text">
+            {{ feedback.feedback_text }}
+        </div>
+        {% if feedback.manager_comment %}
+        <div class="manager-comment">
+            <span class="comment-label">Комментарий менеджера:</span>
+            {{ feedback.manager_comment }}
+        </div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="no-feedback">
+        <p>Пока нет отзывов</p>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+// ФИКСИРУЕМ ШИРИНУ ПОЛОС СРАЗУ ПРИ ЗАГРУЗКЕ
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== ИСПРАВЛЕНИЕ ШИРИНЫ ПОЛОС ===');
+    
+    // Проходим по всем полосам
+    document.querySelectorAll('.gradient-fill').forEach((fill, index) => {
+        // Находим значение рейтинга
+        const valueElement = fill.closest('.criteria-item').querySelector('.criteria-value');
+        
+        // Преобразуем текст значения (заменяем запятую на точку)
+        const ratingText = valueElement.textContent;
+        const rating = parseFloat(ratingText.replace(',', '.'));
+        
+        // Вычисляем правильный процент
+        if (!isNaN(rating)) {
+            // Линейное преобразование: 1→20%, 5→100%
+            const percentage = ((rating - 1.0) / 4.0) * 100;
+            
+            // Устанавливаем ширину
+            fill.style.width = `${percentage}%`;
+            console.log(`Полоса ${index + 1}: рейтинг ${rating} → ${percentage}%`);
+        }
+    });
+});
+
+// Функция для применения фильтров
+function applyFilters() {
+    const pvzFilter = document.getElementById('pvzFilter').value;
+    const ratingFilter = document.getElementById('ratingFilter').value;
+    
+    console.log('Applying filters:', { pvzFilter, ratingFilter });
+    
+    // Получаем все карточки
+    const pvzCards = document.querySelectorAll('.pvz-card');
+    const employeeCards = document.querySelectorAll('.employee-card');
+    const feedbackItems = document.querySelectorAll('.feedback-item');
+    
+    // Счетчики
+    let visiblePvzCount = 0;
+    let visibleEmployeeCount = 0;
+    
+    // 1. Фильтрация карточек ПВЗ
+    pvzCards.forEach(card => {
+        let show = true;
+        
+        // Фильтр по ПВЗ
+        if (pvzFilter && card.dataset.pvzId != pvzFilter) {
+            show = false;
+        }
+        
+        // Фильтр по рейтингу
+        if (ratingFilter && show) {
+            const ratingNumber = card.querySelector('.rating-number');
+            if (ratingNumber) {
+                const ratingText = ratingNumber.textContent;
+                const ratingValue = parseFloat(ratingText.replace(',', '.'));
+                const roundedRating = Math.round(ratingValue);
+                if (roundedRating != parseInt(ratingFilter)) {
+                    show = false;
+                }
+            }
+        }
+        
+        if (show) {
+            card.style.display = 'block';
+            visiblePvzCount++;
+            
+            // Выделяем выбранную карточку ПВЗ
+            if (pvzFilter && card.dataset.pvzId == pvzFilter) {
+                card.classList.add('selected');
+                card.style.border = '2px solid #00BFFF';
+                card.style.boxShadow = '0 4px 15px rgba(0, 191, 255, 0.2)';
+            } else {
+                card.classList.remove('selected');
+                card.style.border = '1px solid #eee';
+                card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            }
+        } else {
+            card.style.display = 'none';
+            card.classList.remove('selected');
+        }
+    });
+    
+    // 2. Фильтрация карточек сотрудников
+    employeeCards.forEach(card => {
+        let show = true;
+        
+        // Если выбран фильтр ПВЗ, показываем только сотрудников этого ПВЗ
+        if (pvzFilter && show) {
+            const pvzIds = card.dataset.pvzIds;
+            console.log('Employee Pvz IDs:', pvzIds, 'Filter:', pvzFilter);
+            
+            if (!pvzIds || pvzIds === ',' || !pvzIds.includes(pvzFilter + ',')) {
+                show = false;
+            }
+        }
+        
+        // Фильтр по рейтингу
+        if (ratingFilter && show) {
+            const ratingNumber = card.querySelector('.rating-number');
+            if (ratingNumber) {
+                const ratingText = ratingNumber.textContent;
+                const ratingValue = parseFloat(ratingText.replace(',', '.'));
+                const roundedRating = Math.round(ratingValue);
+                if (roundedRating != parseInt(ratingFilter)) {
+                    show = false;
+                }
+            }
+        }
+        
+        if (show) {
+            card.style.display = 'block';
+            visibleEmployeeCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // 3. Фильтрация отзывов
+    feedbackItems.forEach(item => {
+        let show = true;
+        
+        if (pvzFilter && item.dataset.pvz != pvzFilter) {
+            show = false;
+        }
+        
+        if (ratingFilter && show) {
+            const itemRatingText = item.dataset.rating;
+            const itemRating = Math.round(parseFloat(itemRatingText.replace(',', '.')));
+            if (itemRating != ratingFilter) {
+                show = false;
+            }
+        }
+        
+        item.style.display = show ? 'block' : 'none';
+    });
+    
+    // 4. Обновляем счетчики
+    document.getElementById('pvzCount').textContent = visiblePvzCount;
+    document.getElementById('employeeCount').textContent = visibleEmployeeCount;
+    
+    // 5. Показываем сообщения, если нет данных
+    showNoDataMessage('pvzCards', visiblePvzCount, 'Нет ПВЗ по выбранным фильтрам');
+    showNoDataMessage('employeeCards', visibleEmployeeCount, 'Нет сотрудников по выбранным фильтрам');
+}
+
+// Функция для показа сообщения "нет данных"
+function showNoDataMessage(containerId, count, message) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // Удаляем старые сообщения
+    const oldMessages = container.querySelectorAll('.no-data-message');
+    oldMessages.forEach(msg => msg.remove());
+    
+    // Добавляем новое сообщение, если нет карточек
+    if (count === 0) {
+        const noDataDiv = document.createElement('div');
+        noDataDiv.className = 'no-data-message';
+        noDataDiv.textContent = message;
+        container.appendChild(noDataDiv);
+    }
+}
+
+// Анимация диаграмм
+document.addEventListener('DOMContentLoaded', function() {
+    // Запускаем анимацию градиентных полос с задержкой
+    setTimeout(() => {
+        document.querySelectorAll('.gradient-fill').forEach((fill, index) => {
+            setTimeout(() => {
+                fill.style.transition = 'width 0.5s ease-out';
+            }, index * 50);
+        });
+    }, 200);
+    
+    // Применяем фильтры при изменении выбора в фильтрах
+    document.getElementById('pvzFilter').addEventListener('change', applyFilters);
+    document.getElementById('ratingFilter').addEventListener('change', applyFilters);
+    
+    // Применяем фильтры при загрузке страницы
+    applyFilters();
+});
+
+// Эффект наведения на карточки
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.rating-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            if (!this.classList.contains('selected')) {
+                this.style.transform = 'translateY(-2px)';
+                this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            }
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            if (!this.classList.contains('selected')) {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

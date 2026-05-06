@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WorkSchedule IS{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>WorkSchedule IS</h3>
+        </div>
+        <div class="sidebar-menu">
+            {% if user.is_authenticated %}
+                {% if user.role == 'admin' %}
+                    <!-- Ссылки для АДМИНИСТРАТОРА -->
+                    <a href="{% url 'users' %}"><i class="fas fa-users"></i> Управление сотрудниками</a>
+                    <a href="{% url 'notifications' %}"><i class="fas fa-bell"></i> Уведомления</a>
+                    <a href="{% url 'settings' %}"><i class="fas fa-cog"></i> Настройки</a>
+                    
+                {% elif user.role == 'manager' %}
+                    <!-- Ссылки для МЕНЕДЖЕРА -->
+                    <a href="{% url 'index_manager' %}"><i class="fas fa-home"></i> Графики сотрудников</a>
+                    <a href="{% url 'statistics' %}"><i class="fas fa-chart-bar"></i> Статистика</a>
+		    <a href="{% url 'manager_tasks' %}"><i class="fas fa-tasks"></i> Управление задачами</a>
+                    <a href="{% url 'manager_users' %}"><i class="fas fa-users"></i> Управление сотрудниками</a>
+                    <a href="{% url 'feedbacks' %}"><i class="fas fa-comment-alt"></i> Отзывы и рейтинги</a>
+                    
+                {% else %}
+                    <!-- Ссылки для СОТРУДНИКА -->
+                    <a href="{% url 'actual_schedule' %}"><i class="fas fa-calendar-alt"></i> Актуальный график</a>
+                    <a href="{% url 'schedule_archive' %}"><i class="fas fa-archive"></i> Архив графиков</a>
+		    <a href="{% url 'employee_tasks' %}"><i class="fas fa-check-square"></i> Задачи</a>
+                {% endif %}
+                
+                <!-- Общие ссылки для всех -->
+                <a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Выйти</a>
+                
+            {% else %}
+                <!-- Ссылки для неавторизованных -->
+                <a href="{% url 'login' %}"><i class="fas fa-sign-in-alt"></i> Войти</a>
+                <a href="{% url 'register' %}"><i class="fas fa-user-plus"></i> Регистрация</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="main-content">
+        {% block header %}
+        <div class="header">
+            <div class="menu-toggle">
+                <i class="fas fa-bars"></i>
+            </div>
+            
+            <div class="header-right">
+                <!-- Уведомления -->
+                <div class="notification-compact">
+                    <i class="fas fa-bell"></i>
+                    {% if user.is_authenticated %}
+                    <span class="notification-badge-compact" id="notificationBadge">{{ user.unread_notifications_count }}</span>
+                    {% else %}
+                    <span class="notification-badge-compact" id="notificationBadge">0</span>
+                    {% endif %}
+                </div>
+
+                <div class="notification-dropdown-compact" id="notificationDropdown">
+                    <div class="notification-header">
+                        <h4>Уведомления</h4>
+                        <button class="mark-all-read" id="markAllRead">Прочитать все</button>
+                    </div>
+                    <div class="notification-list" id="notificationList">
+                        <div class="loading-notifications">Загрузка уведомлений...</div>
+                    </div>
+                    <div class="notification-footer">
+                        <a href="{% url 'notifications' %}" class="view-all-notifications">Все уведомления</a>
+                    </div>
+                </div>
+                
+                {% if user.is_authenticated %}
+                <div class="user-menu" id="userMenu">
+                    <div class="user-avatar" title="Нажмите для сворачивания">
+                        {{ user.first_name|first|default:user.username|first|upper }}
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name">{{ user.first_name|default:user.username }}</div>
+                        <div class="user-role-compact">
+                            {% if user.role == 'admin' %}Администратор
+                            {% elif user.role == 'manager' %}Управляющий
+                            {% else %}Сотрудник{% endif %}
+                        </div>
+                    </div>
+                    <div class="header-links">
+                        <a href="{% url 'profile' %}" class="header-link">Профиль</a>
+                        <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="header-link" style="background: none; border: none; cursor: pointer; color: #00BFFF; font-size: 12px; padding: 4px 8px; border-radius: 12px; transition: all 0.3s ease; background: rgba(0, 191, 255, 0.1);">
+                                Выйти
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endblock %}
+
+        <div class="content">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+
+    <div class="calendar-time">
+        <button class="toggle-btn">×</button>
+        <div class="calendar-content">
+            <h4>{% now "F Y" %}</h4>
+            <div class="time">{% now "H:i" %}</div>
+            <div class="date">{% now "l, j F Y" %}</div>
+        </div>
+        <div class="calendar-icon">📅</div>
+    </div>
+
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

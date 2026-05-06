@@ -1,0 +1,277 @@
+{% extends "base_auth.html" %}
+{% load static %}
+
+{% block title %}Вход - WorkSchedule IS{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="fas fa-calendar-alt"></i>
+                <h1>WorkSchedule IS</h1>
+            </div>
+            <h2>Вход в систему</h2>
+            <p>Введите ваши учетные данные</p>
+        </div>
+        
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="alert alert-error">
+                <i class="fas fa-exclamation-circle"></i>
+                Неверное имя пользователя или пароль.
+            </div>
+            {% endif %}
+            
+            <div class="form-group">
+                <label for="username">
+                    <i class="fas fa-user"></i>
+                    Логин
+                </label>
+                <input type="text" id="username" name="username" required 
+                       placeholder="Введите ваш логин">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">
+                    <i class="fas fa-lock"></i>
+                    Пароль
+                </label>
+                <input type="password" id="password" name="password" required 
+                       placeholder="Введите ваш пароль">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full">
+                <i class="fas fa-sign-in-alt"></i>
+                Войти
+            </button>
+            
+            <div class="auth-links">
+                <a href="{% url 'register' %}" class="auth-link">
+                    <i class="fas fa-user-plus"></i>
+                    Регистрация
+                </a>
+                <a href="#" class="auth-link">
+                    <i class="fas fa-question-circle"></i>
+                    Забыли пароль?
+                </a>
+            </div>
+        </form>
+        
+        <div class="auth-footer">
+            <p>WorkSchedule IS &copy; 2025</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #00BFFF 0%, #0099CC 100%);
+    padding: 20px;
+}
+
+.auth-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    padding: 40px;
+    width: 100%;
+    max-width: 450px;
+    position: relative;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.auth-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.auth-logo i {
+    font-size: 2.5em;
+    color: #00BFFF;
+}
+
+.auth-logo h1 {
+    color: #00BFFF;
+    margin: 0;
+    font-size: 1.8em;
+}
+
+.auth-header h2 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1.5em;
+}
+
+.auth-header p {
+    color: #A9A9A9;
+    margin: 0;
+}
+
+.auth-form {
+    width: 100%;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group i {
+    color: #00BFFF;
+    width: 16px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #e1e5e9;
+    border-radius: 10px;
+    box-sizing: border-box;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+}
+
+.form-group input:focus {
+    border-color: #00BFFF;
+    background-color: white;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 191, 255, 0.1);
+}
+
+.form-group input::placeholder {
+    color: #A9A9A9;
+}
+
+.btn-full {
+    width: 100%;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #00BFFF 0%, #0099CC 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 191, 255, 0.3);
+}
+
+.alert-error {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+}
+
+.auth-links {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #e1e5e9;
+}
+
+.auth-link {
+    color: #00BFFF;
+    text-decoration: none;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.3s ease;
+}
+
+.auth-link:hover {
+    color: #0099CC;
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e1e5e9;
+    color: #A9A9A9;
+    font-size: 14px;
+}
+
+@media (max-width: 480px) {
+    .auth-card {
+        padding: 30px 20px;
+    }
+    
+    .auth-links {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .auth-logo {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .auth-logo h1 {
+        font-size: 1.5em;
+    }
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #EE82EE 0%, #d870d8 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #d870d8 0%, #c864c8 100%); /* ТЕМНО-РОЗОВЫЙ ПРИ НАВЕДЕНИИ */
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(238, 130, 238, 0.3); /* РОЗОВАЯ ТЕНЬ */
+}
+
+.auth-link {
+    color: #EE82EE; /* РОЗОВЫЙ ДЛЯ ССЫЛОК */
+}
+
+.auth-link:hover {
+    color: #d870d8; /* ТЕМНО-РОЗОВЫЙ ПРИ НАВЕДЕНИИ */
+}
+
+</style>
+{% endblock %}

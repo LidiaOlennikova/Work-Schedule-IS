@@ -1,0 +1,881 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Статистика - WorkSchedule IS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Статистика загруженности</h2>
+    <div class="header-actions">
+    </div>
+</div>
+
+<div class="filters-container">
+    <form method="get" class="filter-form">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="pvzSelect">Выберите пункт выдачи:</label>
+                <select id="pvzSelect" name="pvz_id" class="filter-select">
+                    <option value="">Все ПВЗ</option>
+                    {% for pvz in pvz_list %}
+                    <option value="{{ pvz.id }}" {% if selected_pvz and selected_pvz.id == pvz.id %}selected{% endif %}>
+                        {{ pvz.pvz_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="dateSelect">Дата:</label>
+                <input type="date" id="dateSelect" name="date" value="{{ selected_date|date:'Y-m-d' }}" class="filter-select">
+            </div>
+            
+            <div class="filter-group">
+                <button type="submit" class="btn btn-info">
+                    <i class="fas fa-filter"></i> Применить фильтры
+                </button>
+                <a href="{% url 'statistics' %}" class="btn btn-secondary">
+                    <i class="fas fa-redo"></i> Сбросить
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="forecast-container">
+    <h3>Прогноз загруженности</h3>
+    <div class="forecast-days">
+        {% for day in forecast_dates %}
+        <div class="forecast-day {% if day.is_past %}past{% elif day.is_today %}current{% else %}future{% endif %}">
+            <div class="date">{{ day.formatted_date }}</div>
+            <div class="day">{{ day.day_name }}</div>
+            <div class="orders {% if day.is_past %}gray-text{% elif day.is_future %}pink-text{% endif %}">
+                {{ day.orders }} заказ{{ day.orders|pluralize:"ов" }}
+            </div>
+            <div class="status {% if day.is_future %}pink-text{% endif %}">
+                {% if day.is_past %}Завершено{% elif day.is_today %}Сегодня{% else %}Ожидается{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="detailed-forecast">
+    <h3>Детальный прогноз на {{ selected_date|date:"d.m.Y" }}</h3>
+    
+    {% if selected_pvz %}
+    <div class="pvz-info">
+        <i class="fas fa-store"></i> ПВЗ: <strong>{{ selected_pvz.pvz_name }}</strong> | 
+        Всего заказов: <strong>{{ total_orders_today }}</strong>
+    </div>
+    {% endif %}
+    
+    <div class="chart-container">
+        <!-- Левая ось Y с делениями -->
+        <div class="y-axis">
+            {% for value in y_axis_values %}
+            <div class="y-tick" style="bottom: calc(100% * {{ value }} / {{ max_y_value }});">
+                <span class="y-label">{{ value }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Основная область диаграммы -->
+        <div class="chart-area">
+            <!-- Сетка -->
+            <div class="grid-lines">
+                {% for grid in grid_positions %}
+                <div class="grid-line" style="bottom: {{ grid.position_px }}px"></div>
+                {% endfor %}
+            </div>
+            
+            <!-- Столбцы -->
+            <div class="bars-container">
+    {% for hour_data in detailed_forecast %}
+    <div class="bar-wrapper">
+        <div class="bar {% if hour_data.is_peak %}highlight{% endif %}" 
+             style="height: {{ hour_data.height_px }}px; bottom: 0; position: absolute;"
+             data-time="{{ hour_data.time_range }}"
+             data-orders="{{ hour_data.order_count }}">
+            <div class="bar-value">{{ hour_data.order_count }}</div>
+        </div>
+        <div class="x-label">{{ hour_data.time_range|slice:":5" }}</div>
+    </div>
+    {% endfor %}
+</div>
+</div>
+    </div>
+    
+    <!-- Легенда -->
+    <div class="chart-legend">
+        <div class="legend-item">
+            <span class="legend-color normal-bar"></span>
+            <span>Обычная нагрузка</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color peak-bar"></span>
+            <span>Пиковая нагрузка</span>
+        </div>
+    </div>
+    
+    <!-- Рекомендации по перерывам -->
+    <div class="break-recommendations">
+        <h4><i class="fas fa-coffee"></i> Рекомендуемое время для перерывов (до 15 минут):</h4>
+        <div class="break-slots">
+            {% for break_info in break_recommendations %}
+            <div class="break-slot {{ break_info.load_type }}">
+                <i class="fas fa-coffee"></i>
+                <span>{{ break_info.time }}</span>
+                <small>{{ break_info.description }}</small>
+            </div>
+            {% empty %}
+            <div class="no-breaks">
+                <i class="fas fa-info-circle"></i>
+                <span>Нет данных для рекомендаций</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="table-container">
+    <h3>Статистика по сотрудникам</h3>
+    <table class="employees-table">
+        <thead>
+            <tr>
+                <th>Сотрудник</th>
+                <th>ПВЗ</th>
+                <th>Отработано часов</th>
+                <th>Опоздания</th>
+                <th>Переработки</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for employee in employees %}
+            <tr>
+                <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+                <td>
+                    {% for pvz in employee.pvz.all %}
+                        {{ pvz.pvz_name }}{% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                        Не назначен
+                    {% endfor %}
+                </td>
+                <td>{{ employee.worked_hours|default:"0" }}</td>
+                <td>{{ employee.late_count|default:"0" }}</td>
+                <td>{{ employee.overtime_count|default:"0" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center;">Нет данных о сотрудниках</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if selected_pvz %}
+<div class="management-actions">
+    <form method="post" action="{% url 'clear_orders' %}" class="clear-form">
+        {% csrf_token %}
+        <input type="hidden" name="pvz_id" value="{{ selected_pvz.id }}">
+        <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+        <button type="submit" class="btn btn-danger" onclick="return confirm('Вы уверены, что хотите удалить все заказы для этого ПВЗ и даты?')">
+            <i class="fas fa-trash-alt"></i> Очистить заказы на {{ selected_date|date:"d.m.Y" }}
+        </button>
+</form>
+</div>
+{% endif %}
+
+<style>
+.header-actions {
+    margin-top: 15px;
+}
+
+.filters-container {
+    margin-bottom: 30px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
+.filter-form {
+    margin-bottom: 0;
+}
+
+.filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
+}
+
+.filter-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: white;
+    font-size: 14px;
+}
+
+.pvz-info {
+    background: #e3f2fd;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.pvz-info i {
+    color: #00BFFF;
+    margin-right: 5px;
+}
+
+.forecast-container {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+.forecast-days {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.forecast-day {
+    text-align: center;
+    padding: 15px;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+}
+
+.forecast-day.past {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.forecast-day.current {
+    background: #e3f2fd;
+    border-color: #00BFFF;
+    transform: scale(1.05);
+}
+
+.forecast-day.future {
+    background: #f4edf7;
+    border-color: #f2d9ff;
+}
+
+.forecast-day .date {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333;
+}
+
+.forecast-day .day {
+    font-size: 12px;
+    color: #666;
+    margin: 5px 0;
+}
+
+.forecast-day .orders {
+    font-size: 18px;
+    font-weight: bold;
+    color: #00BFFF;
+    margin: 10px 0;
+}
+
+.forecast-day .orders.gray-text {
+    color: #A9A9A9;
+}
+
+.forecast-day .orders.pink-text {
+    color: #EE82EE;
+}
+
+.forecast-day .status {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #e0e0e0;
+    display: inline-block;
+}
+
+.forecast-day .status.pink-text {
+    background: #EE82EE;
+    color: white;
+}
+
+.forecast-day.current .status {
+    background: #00BFFF;
+    color: white;
+}
+
+.detailed-forecast {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+.break-recommendations {
+    margin-top: 30px;
+    padding: 15px;
+    background: #f0f8ff;
+    border-radius: 8px;
+    border-left: 4px solid #00BFFF;
+}
+
+.break-recommendations h4 {
+    margin-top: 0;
+    color: #00BFFF;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.break-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.break-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.break-slot.good {
+    background: #e8f5e8;
+    border: 1px solid #4caf50;
+}
+
+.break-slot.average {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+}
+
+.break-slot.bad {
+    background: #f8d7da;
+    border: 1px solid #dc3545;
+}
+
+.break-slot i {
+    font-size: 20px;
+    margin-bottom: 5px;
+    color: #666;
+}
+
+.break-slot span {
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.break-slot small {
+    font-size: 10px;
+    color: #666;
+}
+
+.no-breaks {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.no-breaks i {
+    font-size: 30px;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.table-container {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+.employees-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.employees-table th,
+.employees-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+.employees-table th {
+    background-color: #00BFFF;
+    color: white;
+    font-weight: bold;
+}
+
+.employees-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.employees-table tr:hover {
+    background-color: #f0f8ff;
+}
+
+.management-actions {
+    text-align: center;
+    margin-top: 20px;
+    padding: 20px;
+    background: #fff3f3;
+    border-radius: 10px;
+    border: 1px solid #ffcccc;
+}
+
+.clear-form {
+    display: inline;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+/* Стилизация диаграммы */
+.chart-container {
+    display: flex;
+    margin: 30px 0;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    min-height: 350px;
+    position: relative;
+}
+
+.y-axis {
+    width: 50px;
+    position: relative;
+    border-right: 1px solid #ddd;
+    height: 280px;
+    margin-top: 10px;
+    flex-shrink: 0;
+}
+
+.y-tick {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #e0e0e0;
+    transform: translateY(-50%);
+}
+
+.y-label {
+    position: absolute;
+    left: -40px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    color: #666;
+    background: white;
+    padding: 0 5px;
+}
+
+.chart-area {
+    flex: 1;
+    position: relative;
+    height: 280px;
+    margin-left: 10px;
+    margin-top: 10px;
+}
+
+.grid-lines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.grid-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #f0f0f0;
+}
+
+.bars-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    height: 100%;
+    position: relative;
+    z-index: 2;
+    padding: 0 10px;
+}
+
+.bar-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    height: 100%;
+    position: relative;
+    margin: 0 2px;
+}
+
+.bar {
+    width: 30px;
+    background: linear-gradient(to top, #00BFFF, #1E90FF);
+    border-radius: 4px 4px 0 0;
+    position: relative;
+    transition: all 0.3s ease;
+    min-height: 1px;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    position: relative;
+}
+
+.bar.highlight {
+    background: linear-gradient(to top, #EE82EE, #DA70D6);
+    box-shadow: 0 0 8px rgba(238, 130, 238, 0.3);
+}
+
+.bar:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    opacity: 0.9;
+}
+
+.bar-value {
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 3px 6px;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    min-width: 20px;
+    z-index: 10;
+    white-space: nowrap;
+}
+
+/* Показываем значения всегда, а не только при наведении */
+.bar-value {
+    opacity: 1;
+}
+
+.x-label {
+    position: absolute;
+    bottom: -30px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 11px;
+    color: #666;
+    font-weight: 500;
+}
+
+/* Легенда */
+.chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin: 20px 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #333;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+}
+
+.normal-bar {
+    background: linear-gradient(to top, #00BFFF, #1E90FF);
+}
+
+.peak-bar {
+    background: linear-gradient(to top, #EE82EE, #DA70D6);
+}
+
+/* Обновленные стили для рекомендаций перерывов */
+.break-recommendations {
+    margin-top: 30px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f0f8ff 0%, #e6f7ff 100%);
+    border-radius: 10px;
+    border-left: 4px solid #00BFFF;
+}
+
+.break-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.break-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    transition: transform 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.break-slot:hover {
+    transform: translateY(-3px);
+}
+
+.break-slot.good {
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edd4 100%);
+    border-color: #4caf50;
+    box-shadow: 0 4px 6px rgba(76, 175, 80, 0.1);
+}
+
+.break-slot.average {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-color: #ffc107;
+    box-shadow: 0 4px 6px rgba(255, 193, 7, 0.1);
+}
+
+.break-slot.bad {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border-color: #dc3545;
+    box-shadow: 0 4px 6px rgba(220, 53, 69, 0.1);
+}
+
+.break-slot i {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: inherit;
+}
+
+.break-slot.good i {
+    color: #4caf50;
+}
+
+.break-slot.average i {
+    color: #ffc107;
+}
+
+.break-slot.bad i {
+    color: #dc3545;
+}
+
+.break-slot span {
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+.break-slot small {
+    font-size: 12px;
+    color: #666;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    .chart-container {
+        flex-direction: column;
+        height: auto;
+        padding: 15px;
+    }
+    
+    .y-axis {
+        width: 100%;
+        height: 40px;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        margin-top: 0;
+        margin-left: 0;
+        margin-bottom: 20px;
+    }
+    
+    .y-tick {
+        position: relative;
+        display: inline-block;
+        width: auto;
+        margin-right: 15px;
+        background: none;
+        border-top: 1px solid #e0e0e0;
+        transform: none;
+    }
+    
+    .y-label {
+        position: relative;
+        left: auto;
+        top: auto;
+        transform: none;
+    }
+    
+    .chart-area {
+        margin-left: 0;
+        margin-top: 0;
+        height: 250px;
+    }
+    
+    .bar {
+        width: 20px;
+    }
+    
+    .bar-value {
+        font-size: 10px;
+        top: -22px;
+    }
+    
+    .chart-legend {
+        flex-direction: column;
+        gap: 15px;
+        align-items: center;
+    }
+    
+    .break-slots {
+        grid-template-columns: 1fr;
+    }
+    
+    .forecast-days {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.bar-wrapper {
+    position: relative;
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    margin: 0 2px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Автообновление страницы при изменении фильтров
+    document.getElementById('pvzSelect').addEventListener('change', function() {
+        if (this.value) {
+            this.form.submit();
+        }
+    });
+    
+    // Устанавливаем текущую дату по умолчанию, если не выбрана
+    const dateInput = document.getElementById('dateSelect');
+    if (dateInput && !dateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+    }
+    
+    // Обработчик для отправки формы при изменении даты
+    dateInput.addEventListener('change', function() {
+        this.form.submit();
+    });
+    
+    // Подсказки при наведении на столбцы
+    const bars = document.querySelectorAll('.bar');
+    
+    bars.forEach(bar => {
+        bar.addEventListener('mouseenter', function() {
+            const time = this.dataset.time;
+            const orders = this.dataset.orders;
+            
+            // Показываем подсказку
+            const tooltip = document.createElement('div');
+            tooltip.className = 'chart-tooltip';
+            tooltip.innerHTML = `
+                <strong>${time}</strong><br>
+                ${orders} заказов
+            `;
+            tooltip.style.position = 'absolute';
+            tooltip.style.background = '#333';
+            tooltip.style.color = 'white';
+            tooltip.style.padding = '8px 12px';
+            tooltip.style.borderRadius = '4px';
+            tooltip.style.fontSize = '12px';
+            tooltip.style.zIndex = '1000';
+            tooltip.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+            
+            const rect = this.getBoundingClientRect();
+            tooltip.style.top = (rect.top - 40) + 'px';
+            tooltip.style.left = (rect.left + rect.width/2 - 60) + 'px';
+            
+            document.body.appendChild(tooltip);
+            this._tooltip = tooltip;
+        });
+        
+        bar.addEventListener('mouseleave', function() {
+            if (this._tooltip) {
+                this._tooltip.remove();
+                this._tooltip = null;
+            }
+        });
+    });
+    
+    // Клик по рекомендациям перерывов
+    document.querySelectorAll('.break-slot').forEach(slot => {
+        slot.addEventListener('click', function() {
+            const time = this.querySelector('span').textContent;
+            const description = this.querySelector('small').textContent;
+            alert(`Рекомендуемый перерыв:\n${time}\n\n${description}`);
+        });
+    });
+});
+</script>
+{% endblock %}

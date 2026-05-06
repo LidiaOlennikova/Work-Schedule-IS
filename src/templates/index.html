@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}WorkSchedule IS - Система управления графиками{% endblock %}
+
+{% block content %}
+<div class="welcome-container">
+    <div class="welcome-card">
+        <div class="welcome-header">
+            <h1>WorkSchedule IS</h1>
+            <p>Система распределения рабочего времени сотрудников</p>
+        </div>
+        
+        <div class="welcome-content">
+            {% if user.is_authenticated %}
+                <div class="welcome-message">
+                    <h2>Добро пожаловать, {{ user.first_name }}!</h2>
+                    <p>Вы авторизованы как 
+                       <strong>
+    {% if user.role == 'admin' %}
+        Администратор
+    {% elif user.role == 'manager' %}
+        Управляющий
+    {% else %}
+        Сотрудник
+    {% endif %}
+</strong>
+                    </p>
+                    
+                    <div class="action-buttons">
+                        {% if user.userprofile.role == 'admin' %}
+                            <a href="{% url 'users' %}" class="btn btn-primary">
+                                <i class="fas fa-users"></i> Управление пользователями
+                            </a>
+                        {% elif user.userprofile.role == 'manager' %}
+                            <a href="{% url 'index_manager' %}" class="btn btn-primary">
+                                <i class="fas fa-calendar-alt"></i> Управление графиками
+                            </a>
+                        {% else %}
+                            <a href="{% url 'actual_schedule' %}" class="btn btn-primary">
+                                <i class="fas fa-calendar-check"></i> Мой график
+                            </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'profile' %}" class="btn btn-secondary">
+                            <i class="fas fa-user"></i> Мой профиль
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <div class="welcome-message">
+                    <h2>Войдите в систему</h2>
+                    <p>Для доступа к функциям системы необходимо авторизоваться</p>
+                    
+                    <div class="action-buttons">
+                        <a href="{% url 'login' %}" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt"></i> Войти
+                        </a>
+                        <a href="{% url 'register' %}" class="btn btn-secondary">
+                            <i class="fas fa-user-plus"></i> Регистрация
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.welcome-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 70vh;
+    padding: 20px;
+}
+
+.welcome-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    padding: 40px;
+    width: 100%;
+    max-width: 600px;
+    text-align: center;
+}
+
+.welcome-header h1 {
+    color: #00BFFF;
+    margin-bottom: 10px;
+    font-size: 2.5em;
+}
+
+.welcome-header p {
+    color: #A9A9A9;
+    font-size: 1.2em;
+    margin-bottom: 30px;
+}
+
+.welcome-message h2 {
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.welcome-message p {
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 1.1em;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: #00BFFF;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0099CC;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background-color: #EE82EE;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #d870d8;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .welcome-card {
+        padding: 20px;
+    }
+}
+</style>
+{% endblock %}

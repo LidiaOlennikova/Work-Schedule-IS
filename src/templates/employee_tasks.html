@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Мои задачи - WorkSchedule IS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-top">
+        <h2><i class="fas fa-check-square"></i> Мои задачи</h2>
+    </div>
+</div>
+
+<div class="tasks-grid">
+    <!-- Персональные задачи -->
+    <div class="task-card">
+        <h3><i class="fas fa-user-check"></i> Мои задачи</h3>
+        <div id="personalTasks">
+            <div class="empty-state">
+                <i class="fas fa-spinner fa-spin"></i> Загрузка задач...
+            </div>
+        </div>
+    </div>
+    
+    <!-- Общие задачи ПВЗ -->
+    <div class="task-card">
+        <h3><i class="fas fa-building"></i> Общие задачи ПВЗ</h3>
+        <div id="pvzTasks">
+            <div class="empty-state">
+                <i class="fas fa-spinner fa-spin"></i> Загрузка задач...
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tasks-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .task-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        padding: 20px;
+    }
+    
+    .task-card h3 {
+        color: #00BFFF;
+        margin-top: 0;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .task-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 15px 0;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+    }
+    
+    .task-item:last-child {
+        border-bottom: none;
+    }
+    
+    .task-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .task-checkbox {
+        margin-right: 15px;
+        margin-top: 3px;
+    }
+    
+    .task-checkbox input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: #00BFFF;
+    }
+    
+    .task-info {
+        flex: 1;
+    }
+    
+    .task-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .task-desc {
+        color: #666;
+        font-size: 14px;
+        margin: 5px 0;
+        line-height: 1.4;
+    }
+    
+    .task-meta {
+        display: flex;
+        gap: 15px;
+        font-size: 12px;
+        color: #888;
+        margin-top: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .task-badge {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: bold;
+        color: white;
+    }
+    
+    .badge-pending {
+        background-color: #FFA500;
+    }
+    
+    .badge-in_progress {
+        background-color: #00BFFF;
+    }
+    
+    .badge-completed {
+        background-color: #28a745;
+    }
+    
+    .badge-cancelled {
+        background-color: #A9A9A9;
+    }
+    
+    .badge-priority-high {
+        background-color: #ff4444;
+    }
+    
+    .badge-priority-medium {
+        background-color: #FFA500;
+    }
+    
+    .badge-priority-low {
+        background-color: #28a745;
+    }
+    
+    .completed-task {
+        opacity: 0.7;
+    }
+    
+    .completed-task .task-title-text {
+        text-decoration: line-through;
+    }
+    
+    .overdue-badge {
+        color: #ff4444;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .overdue-badge i {
+        margin-right: 3px;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #aaa;
+    }
+    
+    .empty-state i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        display: block;
+    }
+    
+    @media (max-width: 768px) {
+        .tasks-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Функция для получения CSRF токена
+function getCsrfToken() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    return csrfToken ? csrfToken.value : '';
+}
+
+// API функции
+async function fetchTasks() {
+    try {
+        const response = await fetch('/api/tasks/', {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
+        const data = await response.json();
+        if (data.success) {
+            return data.tasks;
+        }
+        console.error('Ошибка загрузки задач:', data.error);
+        return [];
+    } catch (error) {
+        console.error('Ошибка сети:', error);
+        return [];
+    }
+}
+
+async function completeTask(taskId) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/complete/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({})
+        });
+        const data = await response.json();
+        if (data.success) {
+            loadAllTasks();
+            // Обновляем счетчик уведомлений
+            if (typeof loadNotifications === 'function') {
+                loadNotifications();
+            }
+        } else {
+            alert('Ошибка: ' + (data.error || 'Не удалось выполнить задачу'));
+        }
+    } catch (error) {
+        console.error('Ошибка сети:', error);
+        alert('Ошибка при выполнении задачи');
+    }
+}
+
+// Рендеринг задач
+function renderTasks(tasks, containerId, isPersonal) {
+    const container = document.getElementById(containerId);
+    
+    if (!tasks || tasks.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-clipboard-list"></i>
+                ${isPersonal ? 'У вас нет назначенных задач' : 'Нет общих задач для ПВЗ'}
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    tasks.forEach(task => {
+        const isOverdue = task.is_overdue;
+        const isCompleted = task.status === 'completed';
+        
+        html += `
+            <div class="task-item ${isCompleted ? 'completed-task' : ''}">
+                <div class="task-checkbox">
+                    <input type="checkbox" 
+                           ${isCompleted ? 'checked' : ''} 
+                           ${isCompleted ? 'disabled' : ''}
+                           onchange="if(this.checked) completeTask(${task.id})"
+                           title="${isCompleted ? 'Задача выполнена' : 'Отметить как выполненную'}">
+                </div>
+                <div class="task-info">
+                    <div class="task-title">
+                        <span class="task-title-text">${escapeHtml(task.title)}</span>
+                        ${isOverdue ? '<span class="overdue-badge"><i class="fas fa-exclamation-circle"></i> Просрочено</span>' : ''}
+                        <span class="task-badge badge-${task.status}">${task.status_display}</span>
+                        <span class="task-badge badge-priority-${task.priority}">${task.priority_display}</span>
+                    </div>
+                    ${task.description ? `<div class="task-desc">${escapeHtml(task.description)}</div>` : ''}
+                    <div class="task-meta">
+                        ${task.pvz_name ? `<span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(task.pvz_name)}</span>` : ''}
+                        ${task.assigned_to_name && !isPersonal ? `<span><i class="fas fa-user"></i> ${escapeHtml(task.assigned_to_name)}</span>` : ''}
+                        ${task.deadline ? `<span><i class="far fa-calendar-alt"></i> ${formatDate(task.deadline)}</span>` : ''}
+                        ${task.created_by_name ? `<span><i class="fas fa-user-edit"></i> Создал: ${escapeHtml(task.created_by_name)}</span>` : ''}
+                        ${task.completed_at ? `<span style="color: #28a745;"><i class="fas fa-check"></i> Выполнено: ${formatDate(task.completed_at)}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+// Загрузка и отображение задач
+async function loadAllTasks() {
+    const tasks = await fetchTasks();
+    
+    // Разделяем на персональные и общие
+    const personalTasks = tasks.filter(t => t.assigned_to_id);
+    const globalTasks = tasks.filter(t => t.is_global);
+    
+    renderTasks(personalTasks, 'personalTasks', true);
+    renderTasks(globalTasks, 'pvzTasks', false);
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    loadAllTasks();
+    
+    // Обновляем задачи каждые 60 секунд
+    setInterval(loadAllTasks, 60000);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,938 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Управление графиками - WorkSchedule IS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-top">
+        <h2>Управление графиками</h2>
+    </div>
+    
+    <div class="controls">
+        <div class="control-item">
+            <div class="pvz-selector">
+                <label for="pvzSelect">Пункт выдачи:</label>
+                <select id="pvzSelect">
+                    {% for pvz in pvz_list %}
+                    <option value="{{ pvz.id }}" {% if current_pvz and current_pvz.id == pvz.id %}selected{% endif %}>
+                        {{ pvz.pvz_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="control-item">
+            <button class="btn-add-employee" id="addEmployeeBtn">
+                <i class="fas fa-plus"></i> Добавить сотрудника
+            </button>
+        </div>
+        
+        <div class="control-item">
+            <button class="request-btn" id="saveScheduleBtn">
+                <i class="fas fa-save"></i> Сохранить изменения
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="schedule-container">
+    {% for month_data in months_data %}
+    <div class="month-section">
+        <h3 class="month-title">График на {{ month_data.month_name }} {{ month_data.year }}</h3>
+
+        <div class="schedule-section">
+            <!-- Первая половина месяца -->
+            <div class="table-container">
+                <table class="schedule-table">
+<thead>
+        <tr>
+            <th style="background-color: #00BFFF; color: white;">Пункт</th>
+            <th style="background-color: #00BFFF; color: white;">Сотрудники</th>
+            {% for day in month_data.first_half_days %}
+            <th style="background-color: #00BFFF; color: white;">{{ day.day_number }}</th>
+            {% endfor %}
+        </tr>
+        <tr>
+            <th style="background-color: #00BFFF; color: white;"></th>
+            <th style="background-color: #00BFFF; color: white;"></th>
+            {% for day in month_data.first_half_days %}
+            <th style="background-color: #F8D6FC; color: grey;">{{ day.weekday_short }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+
+<tbody>
+    {% for employee in month_data.employees %}
+    <tr>
+        <td>{{ current_pvz.pvz_name }}</td>
+        <td>
+            <div class="employee-cell">
+                {{ employee.name }}
+                <button class="btn-remove-employee" data-employee="{{ employee.id }}" title="Удалить сотрудника">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </td>
+        {% for day in month_data.first_half_days %}
+        <td>
+            {% with day_date=day.date.isoformat %}
+<select class="shift-select" data-employee="{{ employee.id }}" data-date="{{ day_date }}">
+    <option value="">-</option>
+    <option value="full" 
+        {% for key, value in employee.schedules.items %}
+            {% if key == day_date and value == 'full' %}selected{% endif %}
+        {% endfor %}
+    >Р</option>
+    <option value="half" 
+        {% for key, value in employee.schedules.items %}
+            {% if key == day_date and value == 'half' %}selected{% endif %}
+        {% endfor %}
+    >Р 1/2</option>
+    <option value="day_off" 
+        {% for key, value in employee.schedules.items %}
+            {% if key == day_date and value == 'day_off' %}selected{% endif %}
+        {% endfor %}
+    >В</option>
+    <option value="other" 
+        {% for key, value in employee.schedules.items %}
+            {% if key == day_date and value == 'other' %}selected{% endif %}
+        {% endfor %}
+    >*</option>
+</select>
+            {% endwith %}
+        </td>
+        {% endfor %}
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="{{ month_data.first_half_days|length|add:2 }}" class="text-center">Нет сотрудников для отображения</td>
+    </tr>
+    {% endfor %}
+</tbody>
+
+                </table>
+            </div>
+            
+            <!-- Вторая половина месяца -->
+            <div class="table-container">
+                <table class="schedule-table">
+		    <thead>
+        <tr>
+            <th style="background-color: #00BFFF; color: white;">Пункт</th>
+            <th style="background-color: #00BFFF; color: white;">Сотрудники</th>
+            {% for day in month_data.second_half_days %}
+            <th style="background-color: #00BFFF; color: white;">{{ day.day_number }}</th>
+            {% endfor %}
+        </tr>
+        <tr>
+            <th style="background-color: #00BFFF; color: white;"></th>
+            <th style="background-color: #00BFFF; color: white;"></th>
+            {% for day in month_data.second_half_days %}
+            <th style="background-color: #F8D6FC; color: grey;">{{ day.weekday_short }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+
+		<tbody>
+    {% for employee in month_data.employees %}
+    <tr>
+        <td>{{ current_pvz.pvz_name }}</td>
+        <td>
+            <div class="employee-cell">
+                {{ employee.name }}
+                <button class="btn-remove-employee" data-employee="{{ employee.id }}" title="Удалить сотрудника">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </td>
+        {% for day in month_data.second_half_days %}
+        <td>
+            {% with day_date=day.date.isoformat %}
+<select class="shift-select" data-employee="{{ employee.id }}" data-date="{{ day_date }}">
+    <option value="">-</option>
+    <option value="full" 
+        {% for key, value in employee.schedules.items %}
+            {% if key == day_date and value == 'full' %}selected{% endif %}
+        {% endfor %}
+    >Р</option>
+    <option value="half" 
+        {% for key, value in employee.schedules.items %}
+            {% if key == day_date and value == 'half' %}selected{% endif %}
+        {% endfor %}
+    >Р 1/2</option>
+    <option value="day_off" 
+        {% for key, value in employee.schedules.items %}
+            {% if key == day_date and value == 'day_off' %}selected{% endif %}
+        {% endfor %}
+    >В</option>
+    <option value="other" 
+        {% for key, value in employee.schedules.items %}
+            {% if key == day_date and value == 'other' %}selected{% endif %}
+        {% endfor %}
+    >*</option>
+</select>
+            {% endwith %}
+        </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Модальное окно добавления сотрудника -->
+<div id="addEmployeeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Добавить сотрудника к графику</h3>
+            <button class="close-btn" onclick="closeAddEmployeeModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="employeeSelect">Выберите сотрудника:</label>
+                <select id="employeeSelect" class="form-input">
+                    <option value="">-- Выберите сотрудника --</option>
+                    {% for employee in available_employees %}
+                    <option value="{{ employee.id }}">{{ employee.get_full_name|default:employee.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeAddEmployeeModal()">Отмена</button>
+            <button type="button" class="btn btn-primary" onclick="addEmployeeToSchedule()">Добавить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно сохранения -->
+<div id="saveModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Сохранение графика</h3>
+            <button class="close-btn" onclick="closeSaveModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <p>Выберите опции сохранения:</p>
+            <div class="notification-option">
+                <input type="checkbox" id="notifyEmployees">
+                <label for="notifyEmployees">Уведомить сотрудников пункта об изменениях</label>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeSaveModal()">Отмена</button>
+            <button type="button" class="btn btn-primary" onclick="confirmSave()">Сохранить</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+.schedule-container {
+    background-color: #fafafa;
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.month-section {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.month-title {
+    color: #00BFFF;
+    margin-bottom: 20px;
+    font-size: 20px;
+    border-bottom: 2px solid #00BFFF;
+    padding-bottom: 10px;
+    width: 100%;
+}
+
+.schedule-section {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    width: 100%;
+}
+
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    min-width: 800px;
+}
+
+.schedule-table th {
+    background-color: #00BFFF;
+    color: white;
+    padding: 12px 8px;
+    text-align: center;
+    font-weight: bold;
+    border: 1px solid #ddd;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.schedule-table td {
+    padding: 8px 5px;
+    text-align: center;
+    border: 1px solid #ddd;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.schedule-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.schedule-table tr:hover {
+    background-color: #f0f8ff;
+}
+
+/* Controls - ВСЕ НА ОДНОМ УРОВНЕ */
+.controls {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.control-item {
+    display: flex;
+    align-items: center;
+}
+
+.pvz-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pvz-selector label {
+    font-weight: bold;
+    color: #333;
+    font-size: 14px;
+    white-space: nowrap;
+    margin-bottom: 0;
+}
+
+.pvz-selector select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: white;
+    font-size: 14px;
+    min-width: 150px;
+    height: 38px;
+}
+
+/* Buttons */
+.request-btn, .btn-add-employee {
+    height: 38px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.request-btn {
+    background-color: #EE82EE;
+    color: white;
+}
+
+.request-btn:hover {
+    background-color: #d870d8;
+}
+
+.btn-add-employee {
+    background-color: #90EE90;
+    color: white;
+}
+
+.btn-add-employee:hover {
+    background-color: #7CFC7C;
+}
+
+.btn-remove-employee {
+    background-color: #FFB6C1;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    margin-left: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-remove-employee:hover {
+    background-color: #FF69B4;
+}
+
+.employee-cell {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 150px;
+}
+
+/* Shift select - РОЗОВЫЙ ФОН ДЛЯ ВЫБРАННЫХ */
+.shift-select {
+    width: 60px;
+    padding: 5px 3px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background: white;
+    text-align: center;
+    font-size: 11px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+/* Розовый фон для выбранных значений */
+.shift-select.has-value {
+    background-color: #EE82EE;
+    color: white;
+    border-color: #EE82EE;
+    font-weight: bold;
+}
+
+/* Подсветка опций при наведении */
+.shift-select option:hover {
+    background-color: #EE82EE !important;
+    color: white !important;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 25px;
+    border-radius: 10px;
+    width: 450px;
+    max-width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #A9A9A9;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background-color: #00BFFF;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #A9A9A9;
+    color: white;
+}
+
+.notification-option {
+    padding: 15px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Стили для загруженных данных */
+.shift-full {
+    background-color: #EE82EE;
+    color: white;
+    border-radius: 3px;
+    padding: 4px 6px;
+    display: inline-block;
+    font-weight: bold;
+    font-size: 11px;
+}
+
+.shift-half {
+    background-color: #dda0dd;
+    color: white;
+    border-radius: 3px;
+    padding: 4px 6px;
+    display: inline-block;
+    font-weight: bold;
+    font-size: 11px;
+}
+
+.shift-day_off {
+    background-color: #c9c9c9;
+    color: white;
+    border-radius: 3px;
+    padding: 4px 6px;
+    display: inline-block;
+    font-weight: bold;
+    font-size: 11px;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+    .controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .control-item {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .pvz-selector {
+        width: 100%;
+    }
+    
+    .pvz-selector select {
+        flex: 1;
+    }
+}
+
+/* Стили для состояния загрузки */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.success-message {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+    border: 1px solid #c3e6cb;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+    border: 1px solid #f5c6cb;
+}
+
+/* ЦВЕТА ДЛЯ ЗАГОЛОВКОВ ТАБЛИЦЫ */
+
+/* Для чисел дней (первая строка) - голубой */
+.schedule-table thead tr:first-child th:nth-child(n+3) {
+    background-color: #00BFFF !important;
+    color: white !important;
+    font-weight: bold !important;
+}
+
+/* Для дней недели (вторая строка) - розовый */
+.schedule-table thead tr:nth-child(2) th:nth-child(n+3) {
+    background-color: #F8D6FC !important;
+    color: grey !important;
+    font-weight: normal !important;
+}
+а
+/* Для колонок "Пункт" и "Сотрудники" - голубой */
+.schedule-table thead tr:first-child th:nth-child(-n+2),
+.schedule-table thead tr:nth-child(2) th:nth-child(-n+2) {
+    background-color: #00BFFF !important;
+    color: white !important;
+    font-weight: bold !important;
+}
+
+/* стили применяются ко всем таблицам */
+.table-container .schedule-table thead tr:first-child th:nth-child(n+3) {
+    background-color: #00BFFF !important;
+    color: white !important;
+}
+
+.table-container .schedule-table thead tr:nth-child(2) th:nth-child(n+3) {
+    background-color: #F8D6FC !important;
+    color: grey !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Открытие модального окна добавления сотрудника
+    document.getElementById('addEmployeeBtn').addEventListener('click', function() {
+        document.getElementById('addEmployeeModal').style.display = 'block';
+    });
+
+    // Сохранение графика
+    document.getElementById('saveScheduleBtn').addEventListener('click', function() {
+        document.getElementById('saveModal').style.display = 'block';
+    });
+
+    // Фильтрация по ПВЗ
+    document.getElementById('pvzSelect').addEventListener('change', function() {
+        filterByPVZ(this.value);
+    });
+
+    // Удаление сотрудника
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-remove-employee')) {
+            const employeeId = e.target.closest('.btn-remove-employee').dataset.employee;
+            removeEmployeeFromSchedule(employeeId);
+        }
+    });
+
+    // Подсветка выбранных смен
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('shift-select')) {
+            updateShiftSelectStyle(e.target);
+        }
+    });
+
+    // Инициализация существующих смен
+    initializeExistingShifts();
+});
+
+function updateShiftSelectStyle(select) {
+    if (select.value) {
+        select.classList.add('has-value');
+    } else {
+        select.classList.remove('has-value');
+    }
+}
+
+function initializeExistingShifts() {
+    // Подсвечиваем существующие смены из базы
+    document.querySelectorAll('.shift-select').forEach(select => {
+        if (select.value) {
+            select.classList.add('has-value');
+        }
+    });
+}
+
+function closeAddEmployeeModal() {
+    document.getElementById('addEmployeeModal').style.display = 'none';
+    document.getElementById('employeeSelect').value = '';
+}
+
+function closeSaveModal() {
+    document.getElementById('saveModal').style.display = 'none';
+}
+
+function addEmployeeToSchedule() {
+    const employeeId = document.getElementById('employeeSelect').value;
+    const pvzId = document.getElementById('pvzSelect').value;
+    
+    if (employeeId) {
+        // Показываем индикатор загрузки
+        const btn = document.querySelector('#addEmployeeModal .btn-primary');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Добавление...';
+        btn.disabled = true;
+        
+        fetch('{% url "add_employee_to_schedule" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                employee_id: employeeId,
+                pvz_id: pvzId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка при добавлении сотрудника: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при добавлении сотрудника');
+        })
+        .finally(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    } else {
+        alert('Выберите сотрудника');
+    }
+}
+
+function removeEmployeeFromSchedule(employeeId) {
+    if (confirm('Удалить сотрудника из графика этого пункта?')) {
+        fetch('{% url "remove_employee_from_schedule" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                employee_id: employeeId,
+                pvz_id: document.getElementById('pvzSelect').value
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка при удалении сотрудника: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при удалении сотрудника');
+        });
+    }
+}
+
+function confirmSave() {
+    const changes = [];
+    const pvzId = document.getElementById('pvzSelect').value;
+    const notifyEmployees = document.getElementById('notifyEmployees').checked;
+    
+    // Сбор всех изменений в графике
+    document.querySelectorAll('.shift-select').forEach(select => {
+        if (select.value) {
+            changes.push({
+                employee_id: select.dataset.employee,
+                date: select.dataset.date,
+                shift_type: select.value
+            });
+        }
+    });
+    
+    if (changes.length === 0) {
+        alert('Нет изменений для сохранения');
+        return;
+    }
+    
+    // Показываем индикатор загрузки
+    const btn = document.querySelector('#saveModal .btn-primary');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
+    btn.disabled = true;
+    
+    fetch('{% url "save_schedule" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            changes: changes,
+            notify_employees: notifyEmployees,
+            pvz_id: pvzId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('График успешно сохранен!' + (data.notified ? ' Сотрудники уведомлены.' : ''));
+            closeSaveModal();
+            // Обновляем подсветку после сохранения
+            initializeExistingShifts();
+        } else {
+            alert('Ошибка при сохранении графика: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при сохранении графика');
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+
+function filterByPVZ(pvzId) {
+    window.location.href = '{% url "index_manager" %}?pvz_id=' + pvzId;
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Загрузка сохраненных смен при загрузке страницы
+function loadSavedShifts() {
+    // AJAX запрос для получения сохраненных смен
+    fetch('/get-saved-shifts/', {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Устанавливаем выбранные значения в select'ы
+            data.shifts.forEach(shift => {
+                const select = document.querySelector(`.shift-select[data-employee="${shift.employee_id}"][data-date="${shift.date}"]`);
+                if (select) {
+                    select.value = shift.shift_type;
+                    // Подсвечиваем выбранные смены
+                    if (shift.shift_type) {
+                        select.classList.add('has-value');
+                    }
+                }
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error loading shifts:', error);
+    });
+}
+
+// Вызываем при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    loadSavedShifts();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Автоматически устанавливаем значения для select'ов
+    setTimeout(function() {
+        document.querySelectorAll('.shift-select').forEach(select => {
+            const date = select.dataset.date;
+            const employeeId = select.dataset.employee;
+            
+            // Здесь должна быть логика установки значения
+            // Пока просто проверяем консоль
+            console.log('Select:', date, employeeId);
+        });
+    }, 100);
+});
+
+// Загрузка сохраненных смен
+function loadSavedShifts() {
+    // Создаем объект с данными из дебага
+    const shiftsData = {};
+    
+    {% for month_data in months_data %}
+        {% for employee in month_data.employees %}
+            {% for key, value in employee.schedules.items %}
+    shiftsData['{{ employee.id }}_{{ key }}'] = '{{ value }}';
+            {% endfor %}
+        {% endfor %}
+    {% endfor %}
+    
+    // Устанавливаем значения в select'ы
+    document.querySelectorAll('.shift-select').forEach(select => {
+        const employeeId = select.dataset.employee;
+        const date = select.dataset.date;
+        const shiftValue = shiftsData[`${employeeId}_${date}`];
+        
+        if (shiftValue) {
+            select.value = shiftValue;
+            select.classList.add('has-value');
+        }
+    });
+}
+
+// Вызываем при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    loadSavedShifts();
+});
+
+</script>
+{% endblock %}
