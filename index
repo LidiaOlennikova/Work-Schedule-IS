@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ИС управления рабочим временем · Лидия Оленникова</title>
+    <title>ИС управления рабочим временем · Work Schedule IS</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         :root {
@@ -94,15 +94,23 @@
         }
 
         .hero-badge {
-            display: inline-block;
-            font-size: 11px;
-            font-weight: bold;
-            text-transform: uppercase;
-            color: var(--accent);
-            background: rgba(0, 191, 255, 0.1);
-            border-radius: 20px;
-            padding: 5px 14px;
-            margin-bottom: 24px;
+    display: inline-block;
+    font-size: 17px;
+    font-weight: bold;
+    color: var(--accent);
+    background: rgba(0, 191, 255, 0.1);
+    border-radius: 8px;
+    padding: 8px 20px;
+    margin-bottom: 28px;
+    letter-spacing: 0.3px;
+}
+
+        .hero-badge-sub {
+            display: block;
+            font-size: 14px;
+            font-weight: normal;
+            color: var(--muted);
+            margin-bottom: 28px;
         }
 
         h1 {
@@ -204,11 +212,6 @@
             border: 1px solid #eee;
             border-radius: 8px;
             padding: 24px;
-            transition: all 0.2s;
-        }
-
-        .info-card:hover {
-            box-shadow: var(--shadow);
         }
 
         .info-card.solution {
@@ -247,16 +250,10 @@
             border-radius: 10px;
             padding: 0;
             overflow: hidden;
-            transition: all 0.2s;
-        }
-
-        .screen-item:hover {
-            box-shadow: var(--shadow);
         }
 
         .screen-img {
             width: 100%;
-            aspect-ratio: 16/9;
             background: #fafafa;
             display: flex;
             align-items: center;
@@ -266,22 +263,8 @@
 
         .screen-img img {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .screen-placeholder {
-            text-align: center;
-            color: #999;
-            font-size: 15px;
-            padding: 40px;
-        }
-
-        .screen-placeholder i {
-            font-size: 44px;
-            color: #ddd;
+            height: auto;
             display: block;
-            margin-bottom: 12px;
         }
 
         .screen-caption {
@@ -301,12 +284,30 @@
             line-height: 1.5;
         }
 
-        /* ── FEATURES ── */
+        /* ── FEATURES (ровно 5 в ряд) ── */
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            grid-template-columns: repeat(5, 1fr);
             gap: 14px;
             margin-top: 20px;
+        }
+
+        @media (max-width: 1000px) {
+            .features-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 650px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 400px) {
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .feature {
@@ -314,12 +315,7 @@
             border: 1px solid #eee;
             border-radius: 8px;
             padding: 20px;
-            transition: all 0.2s;
-        }
-
-        .feature:hover {
-            border-color: var(--accent);
-            box-shadow: var(--shadow);
+            text-align: center;
         }
 
         .feature .icon {
@@ -359,11 +355,6 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            transition: all 0.2s;
-        }
-
-        .tag:hover {
-            background: #e6f7ff;
         }
 
         .tag-dot {
@@ -371,60 +362,6 @@
             height: 6px;
             border-radius: 50%;
             background: var(--accent);
-        }
-
-        /* ── AUTHOR ── */
-        .author-block {
-            display: flex;
-            gap: 24px;
-            align-items: flex-start;
-            margin-top: 20px;
-            background: #fafafa;
-            border-radius: 10px;
-            padding: 24px;
-            border: 1px solid #eee;
-        }
-
-        @media (max-width: 550px) {
-            .author-block {
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-            }
-        }
-
-        .author-avatar {
-            width: 72px;
-            height: 72px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent), #0099CC);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 24px;
-            flex-shrink: 0;
-        }
-
-        .author-name {
-            font-size: 18px;
-            font-weight: bold;
-            color: var(--text);
-            margin-bottom: 4px;
-        }
-
-        .author-role {
-            font-size: 13px;
-            color: var(--accent);
-            margin-bottom: 10px;
-        }
-
-        .author-bio {
-            font-size: 14px;
-            color: var(--muted);
-            margin: 0;
-            line-height: 1.6;
         }
 
         /* ── FOOTER ── */
@@ -445,7 +382,6 @@
             text-decoration: underline;
         }
 
-        /* ── ЕДИНСТВЕННЫЙ РОЗОВЫЙ АКЦЕНТ ── */
         .hero-highlight {
             color: var(--pink);
         }
@@ -467,7 +403,7 @@
 
         <!-- HERO -->
         <div class="hero">
-            <div class="hero-badge">Выпускная квалификационная работа · СПБГУТ · 2026</div>
+            <div class="hero-badge">Выпускная квалификационная работа &nbsp;·&nbsp; СПБГУТ &nbsp;·&nbsp; 2026</div>
             <h1>ИС управления <span class="hero-highlight">рабочим временем</span> сотрудников</h1>
             <p class="hero-sub">
                 Веб-приложение для автоматизации составления расписания и управления рабочим временем сотрудников сети пунктов выдачи заказов маркетплейсов.
@@ -489,14 +425,12 @@
                 <div class="info-card">
                     <div class="icon">😵‍💫</div>
                     <h4>Проблема</h4>
-                    <p>Расписание сотрудников составлялось вручную в таблицах. Это приводило к конфликтам смен, ошибкам учёта рабочего времени и потере управляемости при росте сети. 
-                    Возникали сложности при назначении задач сотрудникам и контроле их выполнения из-за разрозненности информации в различных мессенджерах.
-                    Из-за хаотичной нагрузки в течении рабочей смены появилась необходимость контролировать время и продолжительнность перерывов, чтобы снизить выгорание сотрудников, и чтобы минимизировать ожидание покупателей.</p>
+                    <p>Расписание сотрудников составлялось вручную в таблицах. Это приводило к конфликтам смен, ошибкам учёта рабочего времени и потере управляемости при росте сети. Возникали сложности при назначении задач сотрудникам и контроле их выполнения из-за разрозненности информации в различных мессенджерах. Из-за хаотичной нагрузки в течение рабочей смены появилась необходимость контролировать время и продолжительность перерывов, чтобы снизить выгорание сотрудников и минимизировать ожидание покупателей.</p>
                 </div>
                 <div class="info-card solution">
                     <div class="icon">✅</div>
                     <h4>Решение</h4>
-                    <p>Информационная система с автоматическим созданием расписания, учётом доступности и нагрузки сотрудников, встроенными дашбордами и модулем задач.</p>
+                    <p>Информационная система с автоматическим созданием расписания, модулем задач, распределением прихода покупателей, учётом нагрузки сотрудников и их рейтинги.</p>
                 </div>
             </div>
         </div>
@@ -510,53 +444,51 @@
 
                 <div class="screen-item">
                     <div class="screen-img">
-                        <div class="screen-placeholder">
-                            <i class="fas fa-calendar-alt"></i>
-                            <img src="screens/Страница управления графиками.png" alt="описание">
-                        </div>
+                        <img src="screenshots/Страница управления графиками.png" alt="Управление расписанием">
                     </div>
                     <div class="screen-caption">
                         <h4>Управление расписанием</h4>
-                        <p>Автоматическое создание смен с учётом доступности и загрузки сотрудников. Удобная таблица на месяц с разделением на две половины.</p>
+                        <p>Автоматическое создание смен с учётом доступности и загрузки сотрудников. Удобная таблица на месяц с разделением на две половины. При этом сотрудники могут подавать запросы на корректировку расписания, а управляющий — рассматривать и утверждать их.</p>
                     </div>
                 </div>
 
                 <div class="screen-item">
                     <div class="screen-img">
-                        <div class="screen-placeholder">
-                            <i class="fas fa-chart-bar"></i>
-                            Скриншот дашборда KPI
-                        </div>
+                        <img src="screenshots/Страница управляющего аналитики нагрузки.png" alt="Дашборд KPI">
                     </div>
                     <div class="screen-caption">
-                        <h4>Дашборд KPI</h4>
-                        <p>Визуализация показателей рабочего времени: явки, опоздания, переработки. Наглядные графики и статистика.</p>
+                        <h4>Дашборд аналитики нагрузки</h4>
+                        <p>Визуализация показателей рабочего времени: явки, опоздания, переработки. Наглядные графики и статистика для управляющего.</p>
                     </div>
                 </div>
 
                 <div class="screen-item">
                     <div class="screen-img">
-                        <div class="screen-placeholder">
-                            <i class="fas fa-tasks"></i>
-                            Скриншот модуля задач
-                        </div>
+                        <img src="screenshots/Страница отзывов и рейтинга сотрудников.png" alt="Отзывы и рейтинг">
                     </div>
                     <div class="screen-caption">
-                        <h4>Модуль задач</h4>
-                        <p>Назначение и отслеживание задач для сотрудников внутри системы. Приоритеты, дедлайны и статусы выполнения.</p>
+                        <h4>Отзывы и рейтинг сотрудников</h4>
+                        <p>Просмотр обратной связи и оценка эффективности работы персонала.</p>
                     </div>
                 </div>
 
                 <div class="screen-item">
                     <div class="screen-img">
-                        <div class="screen-placeholder">
-                            <i class="fas fa-users"></i>
-                            Скриншот профилей сотрудников
-                        </div>
+                        <img src="screenshots/Страница назначения  задач.png" alt="Модуль задач">
                     </div>
                     <div class="screen-caption">
-                        <h4>Управление сотрудниками</h4>
-                        <p>Профили сотрудников, доступность и настройки учётных записей. Распределение по пунктам выдачи.</p>
+                        <h4>Назначение задач</h4>
+                        <p>Создание и распределение задач между сотрудниками. Приоритеты, дедлайны и отслеживание статусов.</p>
+                    </div>
+                </div>
+
+                <div class="screen-item">
+                    <div class="screen-img">
+                        <img src="screenshots/Страница выполнения задач.png" alt="Выполнение задач">
+                    </div>
+                    <div class="screen-caption">
+                        <h4>Выполнение задач</h4>
+                        <p>Интерфейс сотрудника для просмотра назначенных задач, отметки о выполнении и смены статусов.</p>
                     </div>
                 </div>
 
@@ -574,8 +506,8 @@
                 </div>
                 <div class="feature">
                     <div class="icon"><i class="fas fa-chart-line"></i></div>
-                    <h5>Аналитика KPI</h5>
-                    <p>Дашборды по рабочему времени: отработанные часы, явка, переработки.</p>
+                    <h5>Аналитика нагрузки на пункт</h5>
+                    <p>Дашборд по ожидаемому приходу покупателей и рекомендации к перерывам.</p>
                 </div>
                 <div class="feature">
                     <div class="icon"><i class="fas fa-clipboard-list"></i></div>
@@ -592,11 +524,6 @@
                     <h5>Уведомления</h5>
                     <p>Оповещения об изменениях в расписании и новых задачах.</p>
                 </div>
-                <div class="feature">
-                    <div class="icon"><i class="fas fa-file-export"></i></div>
-                    <h5>Документация</h5>
-                    <p>Экспорт отчётов по рабочему времени для внутренней отчётности.</p>
-                </div>
             </div>
         </div>
 
@@ -609,31 +536,13 @@
                 <div class="tag"><span class="tag-dot"></span> PostgreSQL</div>
                 <div class="tag"><span class="tag-dot"></span> REST API</div>
                 <div class="tag"><span class="tag-dot"></span> HTML / CSS / JS</div>
-                <div class="tag"><span class="tag-dot"></span> Power BI</div>
-                <div class="tag"><span class="tag-dot"></span> Yandex DataLens</div>
                 <div class="tag"><span class="tag-dot"></span> GitHub</div>
-            </div>
-        </div>
-
-        <!-- AUTHOR -->
-        <div class="section">
-            <h2>О проекте</h2>
-            <p>Выпускная квалификационная работа, защита — 2026 г. Проект основан на реальном опыте управления сетью ПВЗ.</p>
-            <p style="font-size: 13px; color: var(--muted);">Статья опубликована на конференции АПИНО (2026): «Разработка ИС управления рабочим временем сотрудников маркетплейсов».</p>
-
-            <div class="author-block">
-                <div class="author-avatar">ЛО</div>
-                <div>
-                    <div class="author-name">Лидия Оленникова</div>
-                    <div class="author-role">Проектный менеджер · СПБГУТ, ИСТ-221</div>
-                    <p class="author-bio">Студентка последнего курса. Совмещаю аналитическую базу (SQL, Python, BI) с практическим опытом координации команд. Работала управляющей сетью ПВЗ и координатором проектов.</p>
-                </div>
             </div>
         </div>
 
         <!-- FOOTER -->
         <div class="footer">
-            Work Schedule IS · Лидия Оленникова · 2026 · <a href="https://github.com/LidiaOlennikova/Work-Schedule-IS" target="_blank"><i class="fab fa-github"></i> GitHub</a>
+            Work Schedule IS · 2026 · <a href="https://github.com/LidiaOlennikova/Work-Schedule-IS" target="_blank"><i class="fab fa-github"></i> GitHub</a>
         </div>
 
     </div>
